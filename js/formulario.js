@@ -66,9 +66,10 @@ function huboCambios() { return APP.actual && JSON.stringify(APP.actual.datos) !
  */
 async function salirDeFicha() {
   if (!APP.actual) return;
+  clearTimeout(_autoguardado);
   if (!huboCambios()) {
     if (APP.actual.esNueva) await borrarBorrador(APP.actual.id);
-    return cerrarVistaFicha();
+    return await cerrarVistaFicha();
   }
   const r = await preguntar('¿Guardar esta evaluación como borrador?',
     'Queda solo en este celular y puede seguir llenándola después.',
@@ -76,13 +77,21 @@ async function salirDeFicha() {
   if (r === 'seguir' || !r) return;
   if (r === 'guardar') await guardarBorrador(true);
   else await borrarBorrador(APP.actual.id);
-  cerrarVistaFicha();
+  await cerrarVistaFicha();
 }
 
-function cerrarVistaFicha() {
+/**
+ * Cierra la ficha y vuelve a LEER lo guardado antes de pintar la lista.
+ * Antes pintaba con la lista que tenía en memoria: un borrador recién
+ * guardado no aparecía en "Borradores" hasta sincronizar, y parecía perdido
+ * (lo encontraron las pruebas del 18/09).
+ */
+async function cerrarVistaFicha() {
+  clearTimeout(_autoguardado);            // que un autoguardado pendiente no resucite un borrador descartado
   $('#vista-ficha').hidden = true;
   document.body.classList.remove('sin-scroll');
   APP.actual = null;
+  await recargarLocales();
   pintarInicio();
 }
 
@@ -254,10 +263,10 @@ function htmlCampo(c) {
       const modo = { telefono: 'tel', entero: 'numeric', decimal: 'decimal' }[c.tipo] || 'text';
       const tipo = c.tipo === 'telefono' ? 'tel' : 'text';
       return envoltura('<label>' + cabeceraCampo(c) + '<input type="' + tipo + '" inputmode="' + modo + '" data-id="' + c.id +
-        '" value="' + esc(v == null ? '' : v) + '" autocomplete="off"></label>');
+        '" value="' + esc(v == null ? '' : v) + '" maxlength="' + (c.tipo === 'texto' ? 300 : 30) + '" autocomplete="off"></label>');
     }
     case 'largo':
-      return envoltura('<label>' + cabeceraCampo(c) + '<textarea rows="3" data-id="' + c.id + '">' + esc(v || '') + '</textarea></label>');
+      return envoltura('<label>' + cabeceraCampo(c) + '<textarea rows="3" maxlength="4000" data-id="' + c.id + '">' + esc(v || '') + '</textarea></label>');
     case 'fecha':
       return envoltura('<label>' + cabeceraCampo(c) + '<input type="date" data-id="' + c.id + '" value="' + esc(v || '') + '"></label>');
     case 'fechahora':
@@ -542,8 +551,14 @@ function preguntar(titulo, texto, botones) {
     $('#dialogo-botones').innerHTML = botones.map((b) =>
       '<button type="button" class="' + (b[2] === 'principal' ? 'btn-principal' : b[2] === 'peligro' ? 'btn-peligro' : 'btn-secundario') +
       '" value="' + b[0] + '">' + esc(b[1]) + '</button>').join('');
-    $$('#dialogo-botones button').forEach((b) => b.addEventListener('click', () => dlg.close(b.value)));
-    dlg.onclose = () => ok(dlg.returnValue || null);
+    // Se responde con el TOQUE, no con el evento 'close' del cuadro: Chrome
+    // no lo dispara mientras la página no se está dibujando (se comprobó en
+    // las pruebas: el envío se quedaba esperando para siempre). El 'close'
+    // queda solo para Esc / botón atrás, que cierran sin tocar un botón.
+    let listo = false;
+    const responder = (v) => { if (listo) return; listo = true; if (dlg.open) dlg.close(v || ''); ok(v || null); };
+    $$('#dialogo-botones button').forEach((b) => b.addEventListener('click', () => responder(b.value)));
+    dlg.onclose = () => responder(dlg.returnValue);
     dlg.returnValue = '';
     dlg.showModal();
   });

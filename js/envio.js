@@ -39,6 +39,7 @@ async function enviarActual() {
     'Después de enviarla ya no se puede cambiar desde el celular. Las correcciones se hacen en la hoja de la DIGER.',
     [['si', 'Enviar', 'principal'], ['no', 'Volver', '']]);
   if (listo !== 'si') return;
+  clearTimeout(_autoguardado);        // un autoguardado pendiente volvería a crear el borrador ya enviado
   cargando(true, 'Preparando el envío…');
   try {
     const { datos, fotos } = await datosParaEnviar(a.id, a.datos);
@@ -51,10 +52,8 @@ async function enviarActual() {
     toast('No se pudo preparar el envío: ' + e.message, 'error');
     return;
   } finally { cargando(false); }
-  cerrarVistaFicha();
   APP.pestana = 'enviadas';
-  await recargarLocales();
-  pintarInicio();
+  await cerrarVistaFicha();
   toast(navigator.onLine ? 'Enviando…' : 'Sin señal: quedó en cola y se enviará sola.');
   enviarCola(true);
 }

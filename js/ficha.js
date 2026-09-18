@@ -392,28 +392,67 @@ var Ficha = (function () {
 
   // ---------------------------------------------------------------- ANEXO
   /**
-   * Hoja anexa: solo cuando el evaluador clasificó MENOS grave que la
-   * sugerencia del sistema, para dejar constancia de su justificación. En los
-   * demás casos la ficha queda en las 2 páginas del formulario oficial.
+   * Hoja(s) anexa(s), solo si hace falta (si no, la ficha queda en las 2
+   * páginas del formulario oficial):
+   *  - Registro fotográfico de daños: las fotos de los elementos marcados M o
+   *    S en las secciones 9 y 10, agrupadas por elemento con su nivel.
+   *  - Justificación: cuando el evaluador clasificó menos grave que la
+   *    sugerencia del sistema.
    */
+  var NIVEL = { m: 'Moderado', s: 'Severo', nl: 'Ninguno/Leve' };
+
   function anexo(d, o, consecutivo) {
-    if (!E.menosGraveQueSugerencia(d) && !d.justificacion_clasif) return '';
+    var fotos = o.fotos || {};
+    var grupos = [];
+    ['s9', 's10'].forEach(function (sid) {
+      var sec = E.seccion(sid);
+      sec.campos.forEach(function (c) {
+        if (c.tipo !== 'fotos' || !(fotos[c.id] || []).length) return;
+        var elemento = E.CAMPOS[c.id.replace(/^foto_/, 'dano_')];
+        var nombre = elemento ? elemento.etiqueta : c.etiqueta;
+        if (elemento && elemento.id === 'dano_otros_ne' && d.dano_otros_ne_desc) nombre = 'Otros: ' + d.dano_otros_ne_desc;
+        var nivel = elemento ? NIVEL[d[elemento.id]] : '';
+        grupos.push({ titulo: sec.n + '. ' + nombre + (nivel ? ' — daño ' + nivel : ''), urls: fotos[c.id] });
+      });
+    });
+    var justificar = E.menosGraveQueSugerencia(d) || !!d.justificacion_clasif;
+    if (!grupos.length && !justificar) return '';
+
     var L = o.logos || {};
-    var sug = E.sugerencia(d);
-    var nombres = { verde: 'HABITABLE (Verde)', amarillo: 'USO RESTRINGIDO (Amarillo)', rojo: 'NO HABITABLE (Rojo)' };
-    var bloqueSug = sug.color
-      ? '<b>' + nombres[sug.color] + '</b>' + (sug.motivos.length ? ' — por: ' + sug.motivos.map(function (m) { return esc(m.texto); }).join('; ') : '')
-      : 'Sin sugerencia: faltan casillas de las secciones 7 a 10.';
-    var elegido = d.clasif_habitabilidad ? E.etiquetaDe('habitabilidad', d.clasif_habitabilidad) : '(sin clasificar)';
-    return '<div class="pagina salto">' +
+    var titulo2 = grupos.length && justificar ? 'ANEXO — REGISTRO FOTOGRÁFICO DE DAÑOS Y JUSTIFICACIÓN'
+      : (grupos.length ? 'ANEXO — REGISTRO FOTOGRÁFICO DE DAÑOS' : 'ANEXO — JUSTIFICACIÓN DE LA CLASIFICACIÓN');
+    var h = '<div class="pagina salto">' +
       '<table class="enc"><tr><td class="enc-izq">' + (L.entidad ? '<img src="' + L.entidad + '" alt="">' : '') +
-      '</td><td class="enc-cen">ANEXO — JUSTIFICACIÓN DE LA CLASIFICACIÓN<br><span class="enc-sub">Formulario No. ' + esc(consecutivo) + '</span></td><td class="enc-der"></td></tr></table>' +
-      '<div class="caja">' + titulo('SUGERENCIA DEL SISTEMA Y CLASIFICACIÓN DEL EVALUADOR') +
-      '<div class="texto">Sugerencia automática según los colores del formulario (secciones 7 a 10): ' + bloqueSug +
-      '<br>Clasificación del evaluador: <b>' + esc(elegido) + '</b>' +
-      (d.justificacion_clasif ? '<br>Justificación: ' + esc(d.justificacion_clasif) : '') +
-      '<br><span class="nota">La sugerencia es una ayuda: la clasificación la decide el evaluador.</span></div></div>' +
-      '</div>';
+      '</td><td class="enc-cen">' + titulo2 + '<br><span class="enc-sub">Formulario No. ' + esc(consecutivo) + '</span></td><td class="enc-der"></td></tr></table>';
+
+    if (justificar) {
+      var sug = E.sugerencia(d);
+      var nombres = { verde: 'HABITABLE (Verde)', amarillo: 'USO RESTRINGIDO (Amarillo)', rojo: 'NO HABITABLE (Rojo)' };
+      var bloqueSug = sug.color
+        ? '<b>' + nombres[sug.color] + '</b>' + (sug.motivos.length ? ' — por: ' + sug.motivos.map(function (m) { return esc(m.texto); }).join('; ') : '')
+        : 'Sin sugerencia: faltan casillas de las secciones 7 a 10.';
+      var elegido = d.clasif_habitabilidad ? E.etiquetaDe('habitabilidad', d.clasif_habitabilidad) : '(sin clasificar)';
+      h += '<div class="caja">' + titulo('SUGERENCIA DEL SISTEMA Y CLASIFICACIÓN DEL EVALUADOR') +
+        '<div class="texto">Sugerencia automática según los colores del formulario (secciones 7 a 10): ' + bloqueSug +
+        '<br>Clasificación del evaluador: <b>' + esc(elegido) + '</b>' +
+        (d.justificacion_clasif ? '<br>Justificación: ' + esc(d.justificacion_clasif) : '') +
+        '<br><span class="nota">La sugerencia es una ayuda: la clasificación la decide el evaluador.</span></div></div>';
+    }
+
+    if (grupos.length) {
+      h += '<div class="caja">' + titulo('REGISTRO FOTOGRÁFICO DE DAÑOS EN ELEMENTOS (SECCIONES 9 Y 10)');
+      grupos.forEach(function (g) {
+        var filas = '';
+        for (var k = 0; k < g.urls.length; k += 2) {
+          filas += '<tr>' + [g.urls[k], g.urls[k + 1]].map(function (u, n) {
+            return u ? '<td class="foto"><img src="' + u + '" alt=""><div class="pie-foto">Foto ' + (k + n + 1) + '</div></td>' : '<td></td>';
+          }).join('') + '</tr>';
+        }
+        h += '<div class="grupo-foto"><div class="subt">' + esc(g.titulo) + '</div><table class="t fotos">' + filas + '</table></div>';
+      });
+      h += '</div>';
+    }
+    return h + pie(o, consecutivo) + '</div>';
   }
 
   // ---------------------------------------------------------------- CSS
@@ -460,6 +499,8 @@ var Ficha = (function () {
     '.fotos td.foto{width:50%;text-align:center;vertical-align:top;padding:3px}' +
     '.fotos img{max-width:100%;max-height:85mm}' +
     '.pie-foto{font-size:8pt;margin-top:2px}' +
+    '.grupo-foto{page-break-inside:avoid;break-inside:avoid;margin-bottom:4px}' +
+    '.fotos img{max-height:78mm}' +
     '.legal{padding:2px 6px 3px;font-size:6pt;line-height:1.2;color:#222;text-align:justify}' +
     '.legal-tit{font-size:6.6pt}' +
     '.sello{border-left:3px solid #1F4E79;background:#EEF3F8;padding:3px 7px;margin-bottom:3px;font-size:7.2pt;color:#333}' +

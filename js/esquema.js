@@ -20,7 +20,7 @@
 var Esquema = (function () {
   'use strict';
 
-  var VERSION = '2026-09-18.2';
+  var VERSION = '2026-09-18.3';
 
   // ---------------------------------------------------------------- LISTAS
   // [código, etiqueta, (filtro)]. El código es lo que viaja y se guarda en
@@ -169,6 +169,18 @@ var Esquema = (function () {
     }
     return c;
   }
+  /**
+   * Foto opcional del elemento dañado: aparece al marcar M o S (máx. 3).
+   * Se había quitado el 18/09 junto con los esquemas y la DIGER pidió
+   * volverla a tener; en la ficha van en un anexo al final.
+   */
+  function fotoDano(fila) {
+    return {
+      id: 'foto_' + fila[0], etiqueta: 'Foto del daño — ' + fila[1], tipo: 'fotos', max: 3,
+      compacto: true, si: { campo: 'dano_' + fila[0], es: ['m', 's'] }
+    };
+  }
+
   var SI_SISMO = { campo: 'tipo_amenaza', es: 'sismo' };
   var SI_PREVIA = { campo: 'eval_previa', es: 'si' };
 
@@ -295,13 +307,14 @@ var Esquema = (function () {
 
   // Se arman las secciones 9 y 10 a partir de las tablas de colores.
   SECCIONES.forEach(function (s) {
-    if (s.id === 's9') ESTRUCTURALES.forEach(function (f) { s.campos.push(campoDano(f, 9)); });
+    if (s.id === 's9') ESTRUCTURALES.forEach(function (f) { s.campos.push(campoDano(f, 9), fotoDano(f)); });
     if (s.id === 's10') {
-      NO_ESTRUCTURALES.forEach(function (f) { s.campos.push(campoDano(f, 10)); });
+      NO_ESTRUCTURALES.forEach(function (f) { s.campos.push(campoDano(f, 10), fotoDano(f)); });
       // "Otros" no tiene color en el papel (casillas blancas): no pesa en la sugerencia.
       s.campos.push(
         { id: 'dano_otros_ne', etiqueta: 'Otros', tipo: 'nlms', lista: 'nlms', grupoDano: 10 },
-        { id: 'dano_otros_ne_desc', etiqueta: 'Otros — ¿cuál?', tipo: 'texto', req: true, si: { campo: 'dano_otros_ne', es: ['m', 's'] } }
+        { id: 'dano_otros_ne_desc', etiqueta: 'Otros — ¿cuál?', tipo: 'texto', req: true, si: { campo: 'dano_otros_ne', es: ['m', 's'] } },
+        fotoDano(['otros_ne', 'Otros'])
       );
     }
   });

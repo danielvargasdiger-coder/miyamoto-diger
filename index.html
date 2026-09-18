@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b4f6c">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="description" content="Evaluación rápida de daños en edificaciones (formulario regional Miyamoto) — DIGER Pereira">
+  <title>Evaluación de daños · DIGER</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="img/icon-192.png">
+  <link rel="apple-touch-icon" href="img/icon-192.png">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="cinta-entorno" class="cinta-entorno"></div>
+
+  <div id="aviso-version" class="aviso-version" hidden>
+    <span>Versión nueva disponible</span>
+    <button type="button" id="btn-actualizar">Actualizar</button>
+  </div>
+
+  <!-- ============================================================ INGRESO -->
+  <section id="vista-ingreso" class="vista ingreso" hidden>
+    <div class="ingreso-caja">
+      <img src="img/logo-app.png" alt="Alcaldía de Pereira · DIGER" class="ingreso-logo">
+      <h1>Evaluación rápida de daños en edificaciones</h1>
+      <p class="ingreso-sub">Formulario regional (Miyamoto · USAID)</p>
+      <p id="modo-demo" class="aviso-suave" hidden>Modo demostración: la app aún no está conectada al servidor. Escriba cualquier código para probarla; nada sale del celular.</p>
+      <form id="form-ingreso" autocomplete="off">
+        <label>Código de acceso <span class="req">*</span>
+          <input name="codigo" required autocapitalize="characters" spellcheck="false">
+        </label>
+        <p class="c-nota">Sus datos se llenan solos en cada evaluación (sección 16). Puede cambiarlos después en el menú.</p>
+        <div id="ingreso-perfil" class="perfil-campos"></div>
+        <button type="submit" class="btn-principal">Ingresar</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============================================================ INICIO -->
+  <section id="vista-inicio" class="vista" hidden>
+    <header id="topbar" class="topbar">
+      <button type="button" id="btn-menu" class="btn-icono" aria-label="Menú y mis datos">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="topbar-titulo">
+        <b>Evaluación de daños</b>
+        <span>DIGER Pereira · formato Miyamoto</span>
+      </div>
+      <nav class="topbar-vistas" aria-label="Vistas">
+        <button type="button" class="btn-icono" data-vista="lista" aria-label="Lista">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
+        </button>
+        <button type="button" class="btn-icono" data-vista="mapa" aria-label="Mapa">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.8-6.5-11a6.5 6.5 0 0 1 13 0c0 5.2-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
+        </button>
+        <button type="button" class="btn-icono" data-vista="tablero" aria-label="Tablero">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20v-8M12 20V5M18 20v-5"/></svg>
+        </button>
+      </nav>
+      <button type="button" id="btn-sync" class="btn-icono" aria-label="Sincronizar">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4h-4"/></svg>
+      </button>
+    </header>
+    <div id="estado-conexion" class="estado-conexion"></div>
+    <div id="panel-lista">
+    <nav class="pestanas" role="tablist">
+      <button type="button" role="tab" class="pestana" data-pestana="porEvaluar">Por evaluar <span class="cuenta">0</span></button>
+      <button type="button" role="tab" class="pestana" data-pestana="borradores">Borradores <span class="cuenta">0</span></button>
+      <button type="button" role="tab" class="pestana" data-pestana="enviadas">Enviadas <span class="cuenta">0</span></button>
+    </nav>
+    <main id="lista" class="lista"></main>
+    </div>
+    <div id="panel-mapa" hidden>
+      <div class="mapa-barra">
+        <div id="mapa-filtros" class="chips"></div>
+      </div>
+      <div id="mapa-leyenda" class="mapa-leyenda"></div>
+      <div class="mapa-caja"><div id="mapa"></div>
+        <button type="button" id="btn-mapa-yo" class="btn-mapa-yo">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22"/></svg><span>Dónde estoy</span>
+        </button><p id="mapa-vacio" class="mapa-vacio" hidden>No hay puntos con ubicación para este filtro.</p></div>
+    </div>
+    <div id="panel-tablero" hidden>
+      <div id="tablero-cuerpo" class="tablero"></div>
+    </div>
+    <button type="button" id="btn-nueva" class="fab" aria-label="Nueva evaluación">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <span>Nueva</span>
+    </button>
+  </section>
+
+  <!-- ============================================================ FICHA -->
+  <section id="vista-ficha" class="vista pantalla" hidden>
+    <header class="ficha-cab">
+      <button type="button" id="btn-salir-ficha" class="btn-icono" aria-label="Salir de la evaluación">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="ficha-cab-texto">
+        <b id="ficha-id">Evaluación nueva</b>
+        <span id="ficha-guardado">Se guarda sola mientras llena</span>
+      </div>
+      <button type="button" id="semaforo" class="semaforo" title="Ir a la clasificación"></button>
+    </header>
+    <div class="progreso"><div id="barra-progreso"></div></div>
+    <nav id="ficha-indice" class="ficha-indice" aria-label="Secciones"></nav>
+    <div id="ficha-scroll" class="ficha-scroll">
+      <div id="ficha-cuerpo" class="ficha-cuerpo"></div>
+    </div>
+    <footer class="ficha-pie">
+      <button type="button" id="btn-anterior" class="btn-secundario">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Anterior
+      </button>
+      <button type="button" id="btn-siguiente" class="btn-principal">Siguiente</button>
+    </footer>
+  </section>
+
+  <!-- ============================================================ CROQUIS -->
+  <section id="vista-croquis" class="vista pantalla croquis" hidden>
+    <header class="ficha-cab">
+      <button type="button" id="croquis-cancelar" class="btn-icono" aria-label="Cancelar">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="ficha-cab-texto"><b id="croquis-titulo">Esquema</b><span>Dibuje con el dedo sobre la cuadrícula</span></div>
+      <button type="button" id="croquis-guardar" class="btn-claro">Listo</button>
+    </header>
+    <div class="croquis-herramientas">
+      <button type="button" data-modo="lapiz" class="btn-herr">Lápiz</button>
+      <button type="button" data-modo="borrador" class="btn-herr">Borrador</button>
+      <button type="button" id="croquis-deshacer" class="btn-herr">Deshacer</button>
+      <button type="button" id="croquis-limpiar" class="btn-herr">Limpiar</button>
+    </div>
+    <div class="croquis-zona"><canvas id="croquis-lienzo"></canvas></div>
+  </section>
+
+  <!-- ============================================================ VISTA PREVIA -->
+  <section id="vista-previa" class="vista pantalla" hidden>
+    <header class="ficha-cab">
+      <button type="button" id="previa-cerrar" class="btn-icono" aria-label="Cerrar la ficha">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="ficha-cab-texto"><b>Ficha</b><span>Así queda el formulario impreso</span></div>
+      <button type="button" id="previa-imprimir" class="btn-claro">Imprimir / PDF</button>
+    </header>
+    <iframe id="previa-marco" class="previa-marco" title="Ficha de la evaluación"></iframe>
+  </section>
+
+  <!-- ============================================================ MENÚ -->
+  <section id="vista-menu" class="vista pantalla menu" hidden>
+    <header class="ficha-cab">
+      <button type="button" id="menu-cerrar" class="btn-icono" aria-label="Cerrar menú">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="ficha-cab-texto"><b>Mis datos</b><span>Se usan en la sección 16 de cada evaluación</span></div>
+    </header>
+    <div class="menu-cuerpo">
+      <div class="menu-yo"><span id="menu-iniciales" class="iniciales"></span><div><b id="menu-nombre"></b><span id="menu-entidad"></span></div></div>
+      <form id="form-perfil" class="tarjeta">
+        <div id="perfil-campos" class="perfil-campos"></div>
+        <button type="submit" class="btn-principal">Guardar mis datos</button>
+      </form>
+      <section class="tarjeta descargas">
+        <h3>Descargar en Excel</h3>
+        <button type="button" id="btn-excel-solicitudes" class="btn-secundario">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>Solicitudes por evaluar
+        </button>
+        <p class="c-nota">Solo las de su entidad. Funciona sin señal.</p>
+        <button type="button" id="btn-excel-evaluaciones" class="btn-secundario">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>Evaluaciones recibidas
+        </button>
+        <p class="c-nota">Todas, con cada campo del formulario y el enlace a la ficha. Necesita señal.</p>
+      </section>
+      <button type="button" id="menu-salir" class="btn-texto peligro">Salir de este celular</button>
+      <p id="menu-version" class="c-nota centro"></p>
+    </div>
+  </section>
+
+  <dialog id="dialogo" class="dialogo">
+    <h2 id="dialogo-titulo"></h2>
+    <p id="dialogo-texto"></p>
+    <div id="dialogo-botones" class="dialogo-botones"></div>
+  </dialog>
+
+  <div id="archivo-listo" class="archivo-listo" hidden>
+    <span id="archivo-listo-txt">Archivo listo</span>
+    <button type="button" id="btn-archivo-guardar">Guardar</button>
+    <button type="button" id="btn-archivo-cerrar" aria-label="Cerrar">×</button>
+  </div>
+
+  <div id="cargando" class="cargando" hidden><div class="girador"></div><span id="cargando-texto">Cargando…</span></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="config.js"></script>
+  <script src="js/esquema.js"></script>
+  <script src="js/ficha.js"></script>
+  <script src="js/base.js"></script>
+  <script src="js/gps.js"></script>
+  <script src="js/fotos.js"></script>
+  <script src="js/formulario.js"></script>
+  <script src="js/envio.js"></script>
+  <script src="js/excel.js"></script>
+  <script src="js/descargas.js"></script>
+  <script src="js/mapa.js"></script>
+  <script src="js/tablero.js"></script>
+  <script src="js/inicio.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

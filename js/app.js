@@ -12,7 +12,7 @@ async function iniciar() {
   enlazarMenu();
   enlazarMapa();
   enlazarTablero();
-  enlazarDescargas();
+  enlazarCompartir();
   $$('[data-vista]').forEach((b) => b.addEventListener('click', () => irAVista(b.dataset.vista)));
   iniciarEventosFicha();
   iniciarEventosFirma();

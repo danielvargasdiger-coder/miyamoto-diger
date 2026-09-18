@@ -1,14 +1,10 @@
 /* =========================================================================
-   DESCARGAS — Excel y PDF.
-   - Solicitudes por evaluar: se arma en el celular, funciona sin señal.
-   - Evaluaciones: las pide al servidor (acción exportar_evaluaciones), con
-     todas las columnas del formulario y el enlace a cada ficha.
-   - PDF de una evaluación: lo arma el servidor (acción pdf_evaluacion); es
-     la salida que sirve en iPhone.
+   DESCARGAS — PDF de una evaluación. Lo arma el servidor (acción
+   pdf_evaluacion); es la salida que sirve en iPhone.
+   Las descargas en Excel se quitaron el 18/09 a pedido de la DIGER (los
+   datos se consultan en la hoja de Google).
    ========================================================================= */
 'use strict';
-
-const TIPO_EXCEL = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 function esIPhoneOIPad() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -55,52 +51,6 @@ function ofrecerGuardar(archivo) {
   $('#btn-archivo-cerrar').onclick = () => { barra.hidden = true; };
 }
 
-function nombreDeArchivo(partes, ext) {
-  const hoy = new Date(), p = (n) => String(n).padStart(2, '0');
-  const limpio = partes.map((x) => String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '')).filter(Boolean).join('_').slice(0, 80);
-  return limpio + '_' + hoy.getFullYear() + '-' + p(hoy.getMonth() + 1) + '-' + p(hoy.getDate()) + '.' + ext;
-}
-
-function hojaAcercaDe(que, cuantas) {
-  return {
-    nombre: 'Acerca de',
-    columnas: [{ titulo: 'Dato', ancho: 26 }, { titulo: 'Valor', ancho: 70 }],
-    filas: [['Contenido', que], ['Registros', cuantas], ['Entidad', APP.perfil.entidad],
-      ['Generado', new Date().toLocaleString('es-CO')], ['Última sincronización', APP.ultimaSync ? fechaBonita(APP.ultimaSync) : 'nunca'],
-      ['Formato', 'Formulario regional de evaluación rápida de daños (Miyamoto) V.1.0 - 03-2023']]
-  };
-}
-
-const num = (v) => { const n = Esquema.aNumero(v); return n === null ? '' : n; };
-
-async function excelSolicitudes() {
-  const lista = solicitudesPendientes();
-  if (!lista.length) { toast('No hay solicitudes por evaluar.'); return; }
-  const hoja = {
-    nombre: 'Por evaluar',
-    columnas: ['ID solicitud', 'Prioridad', 'Dirección', 'Barrio/Vereda', 'Municipio', 'Contacto', 'Teléfono', 'Descripción',
-      'Asignada a', 'Latitud', 'Longitud'],
-    filas: lista.map((s) => [s.id_solicitud, s.prioridad, s.direccion, s.barrio, s.municipio, s.contacto, String(s.telefono || ''),
-      s.descripcion, s.asignado || '', num(s.lat), num(s.lon)])
-  };
-  await entregarArchivo(Excel.crear([hoja, hojaAcercaDe('Solicitudes por evaluar', lista.length)]),
-    nombreDeArchivo(['Solicitudes por evaluar', APP.perfil.entidad], 'xlsx'), TIPO_EXCEL);
-}
-
-async function excelEvaluaciones(boton) {
-  const texto = boton.innerHTML;
-  boton.disabled = true; boton.textContent = 'Pidiendo al servidor…';
-  try {
-    const r = await api('exportar_evaluaciones', {}, 90000);
-    const hoja = { nombre: 'Evaluaciones', columnas: r.columnas, filas: r.filas };
-    await entregarArchivo(Excel.crear([hoja, hojaAcercaDe('Evaluaciones recibidas (todas las entidades)', r.filas.length)]),
-      nombreDeArchivo(['Evaluaciones Miyamoto'], 'xlsx'), TIPO_EXCEL);
-  } catch (e) {
-    toast(e.delServidor ? e.message : 'Se necesita señal para descargar las evaluaciones.', 'error');
-  } finally { boton.disabled = false; boton.innerHTML = texto; }
-}
-
 function base64ABytes(b64) {
   const bin = atob(b64), bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -116,9 +66,4 @@ async function descargarPdf(id, boton) {
   } catch (e) {
     toast(e.delServidor ? e.message : 'Se necesita señal para descargar el PDF.', 'error');
   } finally { boton.disabled = false; boton.innerHTML = texto; }
-}
-
-function enlazarDescargas() {
-  $('#btn-excel-solicitudes').addEventListener('click', excelSolicitudes);
-  $('#btn-excel-evaluaciones').addEventListener('click', (ev) => excelEvaluaciones(ev.currentTarget));
 }

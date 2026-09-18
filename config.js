@@ -34,6 +34,13 @@ var CONFIG = (function () {
     API_URL: api,
     DEMO: !api,
 
+    /**
+     * Servidor del que la página ficha.html lee las fichas compartidas.
+     * Un enlace de ficha siempre es de producción, aunque se abra desde
+     * otra dirección (en pruebas o en el computador no hay otro servidor).
+     */
+    URL_SERVIDOR_FICHAS: api || SERVIDORES.produccion,
+
     /** Nombre corto de la app y de la entidad que la usa. */
     NOMBRE_APP: 'Evaluación de daños',
     ENTIDAD: 'DIGER Pereira',

@@ -258,6 +258,7 @@ function abrirMenu() {
   $('#menu-nombre').textContent = p.nombre || '';
   $('#menu-entidad').textContent = p.entidad + (CONFIG.DEMO ? ' · demostración' : '');
   $('#perfil-campos').innerHTML = htmlCamposPerfil(p);
+  pintarCompartir();
   firmaPendiente = null;
   pintarFirmas(p.firma);
   $('#menu-version').textContent = 'Versión ' + VERSION_APP + ' · formulario ' + Esquema.VERSION +

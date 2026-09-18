@@ -4,7 +4,7 @@
    ========================================================================= */
 'use strict';
 
-const VERSION_APP = 'miyamoto-4';     // subirla junto con VERSION en sw.js
+const VERSION_APP = 'miyamoto-5';     // subirla junto con VERSION en sw.js
 
 const APP = {
   perfil: null,          // { codigo, entidad, nombre, tipo_doc, num_doc, id_evaluador, matricula, dependencia }
@@ -227,12 +227,6 @@ async function apiDemo(accion, p) {
     }
     case 'cerrar_evaluacion':
       return { ok: true, estado: 'COMPLETA', faltan: [], ficha_url: '' };
-    case 'exportar_evaluaciones': {
-      const evs = Object.values(s.evaluaciones);
-      return { ok: true, columnas: ['No. formulario', 'Fecha', 'Dirección', 'Barrio/Vereda', 'Clasificación', 'Evaluador', 'Latitud', 'Longitud'],
-        filas: evs.map((e) => [e.num_formulario, fechaBonita(e.fecha), e.direccion, e.barrio,
-          e.clasif ? Esquema.etiquetaDe('habitabilidad', e.clasif) : '', e.evaluador, e.lat, e.lon]) };
-    }
     default:
       throw new Error('Acción no disponible en demostración: ' + accion);
   }

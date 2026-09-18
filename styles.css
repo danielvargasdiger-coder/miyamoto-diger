@@ -416,9 +416,21 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .columnas .col span { width: 100%; background: var(--azul); border-radius: 2px 2px 0 0; }
 .columnas-eje { display: flex; justify-content: space-between; font-size: .78rem; color: var(--texto-suave); margin-top: 4px; }
 
-.descargas { display: grid; gap: 6px; }
-.descargas h3 { font-size: 1rem; margin-bottom: 4px; }
-.descargas .c-nota { margin: 0 0 8px; }
+/* isolation: Leaflet pone sus capas con z-index 400-1000. Sin encerrarlas,
+   el mapa se dibujaba ENCIMA del menú y de las pantallas completas (z 60). */
+.mapa-caja, .mapa-tablero { isolation: isolate; }
+.mapa-tablero { height: 360px; border-radius: 8px; overflow: hidden; background: #dde6ec; }
+
+/* Compartir la app (menú) */
+.bloque-compartir { text-align: center; display: grid; gap: 10px; justify-items: center; }
+.bloque-compartir h3 { font-size: 1rem; margin: 0; }
+.bloque-compartir .c-nota { margin: 0; }
+.qr-caja { background: #fff; padding: 10px; border-radius: 10px; border: 1px solid var(--borde); color: #0a1f2c; }
+.qr-caja svg { width: 184px; height: 184px; display: block; }
+.qr-url { margin: 0; font-size: .82rem; color: var(--texto-suave); overflow-wrap: anywhere; }
+.compartir-botones { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.compartir-botones > * { min-height: 44px; }
+.bloque-compartir .btn-principal { width: 100%; max-width: 320px; }
 .archivo-listo {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 105;
   display: flex; align-items: center; gap: 10px; background: #1f2d38; color: #fff; padding: 10px 12px 10px 16px; border-radius: 12px;

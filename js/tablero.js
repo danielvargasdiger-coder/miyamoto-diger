@@ -6,7 +6,7 @@
    ========================================================================= */
 'use strict';
 
-const TABLERO = { periodo: '30', quien: 'todas' };
+const TABLERO = { periodo: '30', quien: 'todas', mapa: null };
 const PERIODOS = [['7', '7 días'], ['30', '30 días'], ['todo', 'Todo']];
 
 function evaluacionesConocidas() {
@@ -80,6 +80,8 @@ function pintarTablero() {
     selector('quien', [['todas', 'Todo el equipo'], ['mias', 'Solo las mías']]) + '</div>' +
     '<div class="cifras">' + cifras.map(([t, n, c]) => '<div class="cifra c-' + c + '"><b>' + n + '</b><span>' + t + '</span></div>').join('') + '</div>' +
     '<div class="paneles">' +
+    '<section class="panel panel-ancho"><h3>Mapa de las evaluaciones</h3><div id="mapa-tablero" class="mapa-tablero"></div>' +
+    '<p class="c-nota" id="mapa-tablero-nota"></p></section>' +
     '<section class="panel"><h3>Habitabilidad</h3>' + barras([
       ['No habitable', por('rojo'), 'var(--rojo)'], ['Uso restringido', por('amarillo'), 'var(--amarillo)'],
       ['Habitable', por('verde'), 'var(--verde)']].filter((x) => x[1] || lista.length === 0)) + '</section>' +
@@ -88,6 +90,33 @@ function pintarTablero() {
     '<section class="panel"><h3>Barrios / veredas con más evaluaciones</h3>' + barras(contar(lista, (e) => e.barrio).slice(0, 8), 'var(--azul)') + '</section>' +
     '<section class="panel"><h3>Por evaluador</h3>' + barras(contar(lista, (e) => e.evaluador).slice(0, 10), 'var(--inst-verde)') + '</section>' +
     '</div><p class="c-nota centro">Corte: ' + esc(estadoDeConexion()) + '</p>';
+  pintarMapaTablero(lista);
+}
+
+/**
+ * Mapa del tablero: las MISMAS evaluaciones que cuentan las cifras (mismo
+ * periodo y mismo "todo el equipo / solo las mías"), con su color. El panel
+ * se vuelve a dibujar con cada filtro, así que el mapa se arma de nuevo.
+ */
+function pintarMapaTablero(lista) {
+  const div = $('#mapa-tablero');
+  if (!div) return;
+  if (TABLERO.mapa) { TABLERO.mapa.remove(); TABLERO.mapa = null; }
+  if (typeof L === 'undefined') { div.innerHTML = '<p class="vacio">No se pudo cargar el mapa.</p>'; return; }
+  const conPunto = lista.filter((e) => Esquema.coordenadaValida(e.lat, e.lon));
+  $('#mapa-tablero-nota').textContent = conPunto.length === lista.length
+    ? conPunto.length + ' evaluaciones en el mapa.'
+    : conPunto.length + ' de ' + lista.length + ' evaluaciones tienen ubicación.';
+  const m = L.map(div, { zoomControl: true, scrollWheelZoom: false }).setView([4.8133, -75.6961], 12);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(m);
+  conPunto.forEach((e) => {
+    const color = COLOR_PUNTO[COLOR_CLASIF[e.clasif] || 'sin'];
+    L.circleMarker([+e.lat, +e.lon], { radius: 7, color: '#fff', weight: 2, fillColor: color, fillOpacity: 0.95 })
+      .bindPopup(htmlPopup({ tipo: 'evaluada', h: e }), { maxWidth: 260 }).addTo(m);
+  });
+  if (conPunto.length) m.fitBounds(L.latLngBounds(conPunto.map((e) => [+e.lat, +e.lon])), { padding: [24, 24], maxZoom: 16 });
+  TABLERO.mapa = m;
+  setTimeout(() => m.invalidateSize(), 60);
 }
 
 function enlazarTablero() {

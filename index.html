@@ -171,16 +171,21 @@
         <p class="c-nota">Entidad: <b data-entidad-fija></b> · Dependencia: <b data-dependencia-fija></b></p>
         <button type="submit" class="btn-principal">Guardar mis datos</button>
       </form>
-      <section class="tarjeta descargas">
-        <h3>Descargar en Excel</h3>
-        <button type="button" id="btn-excel-solicitudes" class="btn-secundario">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>Solicitudes por evaluar
-        </button>
-        <p class="c-nota">Solo las de su entidad. Funciona sin señal.</p>
-        <button type="button" id="btn-excel-evaluaciones" class="btn-secundario">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>Evaluaciones recibidas
-        </button>
-        <p class="c-nota">Todas, con cada campo del formulario y el enlace a la ficha. Necesita señal.</p>
+      <!-- El QR va escrito aquí dentro, no como archivo aparte: así se ve sin
+           señal. Apunta a CONFIG.URL_PUBLICA; si esa dirección cambia, hay que
+           regenerarlo (herramientas/qr_app.svg y la prueba probar_app.js). -->
+      <section class="tarjeta bloque-compartir">
+        <h3>Compartir la app</h3>
+        <p class="c-nota">Que apunten la cámara del celular al código. Se abre la app y desde ahí se instala.</p>
+        <div class="qr-caja"><svg viewBox="0 0 37 37" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" role="img" aria-label="Código QR de la app de evaluación de daños"><path fill="currentColor" d="M2 2h7v1h-7zM12 2h2v1h-2zM15 2h1v1h-1zM18 2h5v1h-5zM25 2h1v1h-1zM28 2h7v1h-7zM2 3h1v1h-1zM8 3h1v1h-1zM13 3h5v1h-5zM20 3h1v1h-1zM23 3h1v1h-1zM28 3h1v1h-1zM34 3h1v1h-1zM2 4h1v1h-1zM4 4h3v1h-3zM8 4h1v1h-1zM10 4h1v1h-1zM12 4h1v1h-1zM15 4h1v1h-1zM17 4h2v1h-2zM22 4h3v1h-3zM28 4h1v1h-1zM30 4h3v1h-3zM34 4h1v1h-1zM2 5h1v1h-1zM4 5h3v1h-3zM8 5h1v1h-1zM10 5h2v1h-2zM16 5h4v1h-4zM24 5h1v1h-1zM28 5h1v1h-1zM30 5h3v1h-3zM34 5h1v1h-1zM2 6h1v1h-1zM4 6h3v1h-3zM8 6h1v1h-1zM10 6h2v1h-2zM13 6h1v1h-1zM17 6h1v1h-1zM19 6h4v1h-4zM25 6h1v1h-1zM28 6h1v1h-1zM30 6h3v1h-3zM34 6h1v1h-1zM2 7h1v1h-1zM8 7h1v1h-1zM10 7h1v1h-1zM14 7h1v1h-1zM16 7h3v1h-3zM20 7h1v1h-1zM23 7h2v1h-2zM28 7h1v1h-1zM34 7h1v1h-1zM2 8h7v1h-7zM10 8h1v1h-1zM12 8h1v1h-1zM14 8h1v1h-1zM16 8h1v1h-1zM18 8h1v1h-1zM20 8h1v1h-1zM22 8h1v1h-1zM24 8h1v1h-1zM26 8h1v1h-1zM28 8h7v1h-7zM10 9h1v1h-1zM12 9h3v1h-3zM16 9h2v1h-2zM22 9h2v1h-2zM26 9h1v1h-1zM2 10h1v1h-1zM4 10h5v1h-5zM12 10h2v1h-2zM15 10h3v1h-3zM19 10h1v1h-1zM24 10h3v1h-3zM28 10h5v1h-5zM3 11h2v1h-2zM9 11h1v1h-1zM11 11h1v1h-1zM13 11h2v1h-2zM16 11h1v1h-1zM18 11h1v1h-1zM20 11h6v1h-6zM28 11h2v1h-2zM31 11h2v1h-2zM34 11h1v1h-1zM6 12h6v1h-6zM14 12h1v1h-1zM17 12h3v1h-3zM22 12h2v1h-2zM27 12h2v1h-2zM30 12h1v1h-1zM32 12h2v1h-2zM4 13h1v1h-1zM6 13h2v1h-2zM9 13h2v1h-2zM13 13h2v1h-2zM16 13h1v1h-1zM18 13h1v1h-1zM21 13h1v1h-1zM23 13h2v1h-2zM26 13h1v1h-1zM28 13h1v1h-1zM30 13h5v1h-5zM2 14h2v1h-2zM6 14h5v1h-5zM12 14h1v1h-1zM14 14h1v1h-1zM19 14h1v1h-1zM24 14h4v1h-4zM29 14h3v1h-3zM33 14h1v1h-1zM5 15h3v1h-3zM9 15h2v1h-2zM12 15h1v1h-1zM15 15h4v1h-4zM20 15h4v1h-4zM25 15h1v1h-1zM28 15h2v1h-2zM33 15h2v1h-2zM2 16h3v1h-3zM7 16h4v1h-4zM14 16h3v1h-3zM19 16h1v1h-1zM22 16h1v1h-1zM24 16h1v1h-1zM27 16h7v1h-7zM2 17h1v1h-1zM4 17h2v1h-2zM9 17h4v1h-4zM14 17h3v1h-3zM18 17h1v1h-1zM22 17h2v1h-2zM27 17h3v1h-3zM31 17h2v1h-2zM2 18h1v1h-1zM6 18h1v1h-1zM8 18h2v1h-2zM11 18h2v1h-2zM16 18h1v1h-1zM19 18h1v1h-1zM21 18h2v1h-2zM24 18h4v1h-4zM29 18h3v1h-3zM34 18h1v1h-1zM3 19h1v1h-1zM6 19h1v1h-1zM9 19h1v1h-1zM11 19h1v1h-1zM14 19h2v1h-2zM18 19h1v1h-1zM20 19h3v1h-3zM25 19h1v1h-1zM28 19h2v1h-2zM31 19h2v1h-2zM34 19h1v1h-1zM3 20h1v1h-1zM5 20h4v1h-4zM13 20h1v1h-1zM15 20h4v1h-4zM22 20h3v1h-3zM26 20h1v1h-1zM28 20h3v1h-3zM32 20h2v1h-2zM6 21h1v1h-1zM9 21h2v1h-2zM15 21h2v1h-2zM23 21h3v1h-3zM27 21h1v1h-1zM29 21h4v1h-4zM34 21h1v1h-1zM2 22h2v1h-2zM5 22h2v1h-2zM8 22h1v1h-1zM10 22h1v1h-1zM15 22h3v1h-3zM19 22h1v1h-1zM24 22h4v1h-4zM29 22h3v1h-3zM33 22h2v1h-2zM2 23h1v1h-1zM7 23h1v1h-1zM9 23h1v1h-1zM11 23h1v1h-1zM13 23h2v1h-2zM17 23h1v1h-1zM21 23h1v1h-1zM23 23h1v1h-1zM25 23h1v1h-1zM28 23h1v1h-1zM31 23h2v1h-2zM34 23h1v1h-1zM2 24h1v1h-1zM4 24h1v1h-1zM6 24h3v1h-3zM14 24h4v1h-4zM22 24h2v1h-2zM27 24h1v1h-1zM32 24h2v1h-2zM2 25h1v1h-1zM6 25h1v1h-1zM9 25h4v1h-4zM16 25h2v1h-2zM21 25h5v1h-5zM31 25h3v1h-3zM2 26h1v1h-1zM4 26h1v1h-1zM8 26h1v1h-1zM10 26h1v1h-1zM14 26h4v1h-4zM19 26h1v1h-1zM21 26h1v1h-1zM24 26h7v1h-7zM34 26h1v1h-1zM10 27h3v1h-3zM14 27h3v1h-3zM18 27h1v1h-1zM21 27h2v1h-2zM24 27h1v1h-1zM26 27h1v1h-1zM30 27h1v1h-1zM32 27h1v1h-1zM34 27h1v1h-1zM2 28h7v1h-7zM11 28h2v1h-2zM14 28h2v1h-2zM17 28h4v1h-4zM22 28h1v1h-1zM24 28h3v1h-3zM28 28h1v1h-1zM30 28h1v1h-1zM32 28h1v1h-1zM2 29h1v1h-1zM8 29h1v1h-1zM10 29h1v1h-1zM12 29h1v1h-1zM14 29h5v1h-5zM20 29h7v1h-7zM30 29h3v1h-3zM34 29h1v1h-1zM2 30h1v1h-1zM4 30h3v1h-3zM8 30h1v1h-1zM10 30h3v1h-3zM14 30h1v1h-1zM19 30h2v1h-2zM24 30h1v1h-1zM26 30h6v1h-6zM2 31h1v1h-1zM4 31h3v1h-3zM8 31h1v1h-1zM10 31h1v1h-1zM12 31h2v1h-2zM15 31h1v1h-1zM17 31h1v1h-1zM20 31h8v1h-8zM30 31h1v1h-1zM33 31h2v1h-2zM2 32h1v1h-1zM4 32h3v1h-3zM8 32h1v1h-1zM10 32h2v1h-2zM13 32h8v1h-8zM26 32h1v1h-1zM28 32h2v1h-2zM32 32h1v1h-1zM2 33h1v1h-1zM8 33h1v1h-1zM11 33h1v1h-1zM14 33h1v1h-1zM18 33h1v1h-1zM20 33h1v1h-1zM22 33h2v1h-2zM27 33h2v1h-2zM30 33h3v1h-3zM2 34h7v1h-7zM10 34h1v1h-1zM12 34h2v1h-2zM16 34h1v1h-1zM19 34h2v1h-2zM24 34h1v1h-1zM26 34h4v1h-4zM31 34h1v1h-1zM33 34h1v1h-1z"/></svg></div>
+        <p class="qr-url" id="qr-url"></p>
+        <div class="compartir-botones">
+          <button type="button" id="btn-compartir" class="btn-secundario" hidden>Compartir…</button>
+          <a id="btn-whatsapp" class="btn-secundario" target="_blank" rel="noopener">WhatsApp</a>
+          <button type="button" id="btn-copiar" class="btn-secundario">Copiar el enlace</button>
+        </div>
+        <button type="button" id="btn-instalar" class="btn-principal" hidden>Instalar en este celular</button>
+        <p id="instalar-ayuda" class="c-nota" hidden></p>
       </section>
       <button type="button" id="menu-salir" class="btn-texto peligro">Salir de este celular</button>
       <p id="menu-version" class="c-nota centro"></p>
@@ -211,8 +216,8 @@
   <script src="js/fotos.js"></script>
   <script src="js/formulario.js"></script>
   <script src="js/envio.js"></script>
-  <script src="js/excel.js"></script>
   <script src="js/descargas.js"></script>
+  <script src="js/compartir.js"></script>
   <script src="js/mapa.js"></script>
   <script src="js/tablero.js"></script>
   <script src="js/inicio.js"></script>

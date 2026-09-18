@@ -23,7 +23,33 @@ function yaEstaInstalada() {
   return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
 }
 
+/** Botón y ayuda de instalar en la pantalla de ingreso (antes de tener código). */
+function pintarInstalarIngreso() {
+  const boton = $('#btn-instalar-ingreso'), ayuda = $('#instalar-ingreso-ayuda');
+  if (!boton) return;
+  if (yaEstaInstalada()) { boton.hidden = true; ayuda.hidden = true; return; }
+  boton.hidden = !invitacionInstalar;
+  ayuda.hidden = !!invitacionInstalar;
+  ayuda.textContent = textoAyudaInstalar();
+}
+
+function textoAyudaInstalar() {
+  // Sin el símbolo ⋮: muchas fuentes de celular no lo traen y sale un cuadrito.
+  return esIPhoneOIPad()
+    ? 'Para instalarla en iPhone: ábrala en Safari, toque Compartir (el cuadrito con la flecha hacia arriba) y luego «Añadir a pantalla de inicio».'
+    : 'Para instalarla: abra el menú del navegador Chrome (los tres puntitos, arriba a la derecha) y toque «Instalar aplicación» o «Añadir a pantalla de inicio».';
+}
+
+async function instalarAhora() {
+  if (!invitacionInstalar) return;
+  invitacionInstalar.prompt();
+  try { await invitacionInstalar.userChoice; } catch (e) { /* la cerró sin decidir */ }
+  invitacionInstalar = null;     // el navegador solo la ofrece una vez
+  pintarCompartir();
+}
+
 function pintarCompartir() {
+  pintarInstalarIngreso();
   const url = $('#qr-url');
   if (!url) return;
   url.textContent = CONFIG.URL_PUBLICA;
@@ -37,10 +63,7 @@ function pintarCompartir() {
     boton.hidden = false; ayuda.hidden = true;
   } else {
     boton.hidden = true; ayuda.hidden = false;
-    // Sin el símbolo ⋮: muchas fuentes de celular no lo traen y sale un cuadrito.
-    ayuda.textContent = esIPhoneOIPad()
-      ? 'En iPhone: toque Compartir (el cuadrito con la flecha hacia arriba) y luego «Añadir a pantalla de inicio».'
-      : 'Para instalarla: abra el menú del navegador (los tres puntitos, arriba a la derecha) y toque «Instalar aplicación» o «Añadir a pantalla de inicio».';
+    ayuda.textContent = textoAyudaInstalar();
   }
 }
 
@@ -60,13 +83,8 @@ async function copiarTexto(texto) {
 }
 
 function enlazarCompartir() {
-  $('#btn-instalar').addEventListener('click', async () => {
-    if (!invitacionInstalar) return;
-    invitacionInstalar.prompt();
-    try { await invitacionInstalar.userChoice; } catch (e) { /* la cerró sin decidir */ }
-    invitacionInstalar = null;     // el navegador solo la ofrece una vez
-    pintarCompartir();
-  });
+  $('#btn-instalar').addEventListener('click', instalarAhora);
+  $('#btn-instalar-ingreso').addEventListener('click', instalarAhora);
   $('#btn-compartir').addEventListener('click', async () => {
     try { await navigator.share({ title: 'Evaluación de daños · DIGER', text: MENSAJE_COMPARTIR, url: CONFIG.URL_PUBLICA }); }
     catch (e) { /* canceló el menú: no es un error */ }

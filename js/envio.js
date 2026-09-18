@@ -142,6 +142,7 @@ async function sincronizar(silencioso) {
     const r = await api('catalogo', {});
     APP.solicitudes = r.solicitudes || [];
     APP.historial = r.evaluaciones || [];
+    await guardarListas(r.listas);
     APP.ultimaSync = new Date().toISOString();
     await DB.guardarKV('catalogo', { solicitudes: APP.solicitudes, historial: APP.historial, cuando: APP.ultimaSync });
     // Lo que el servidor ya devuelve deja de hacer falta en el historial local.

@@ -4,7 +4,7 @@
    ========================================================================= */
 'use strict';
 
-const VERSION_APP = 'miyamoto-5';     // subirla junto con VERSION en sw.js
+const VERSION_APP = 'miyamoto-6';     // subirla junto con VERSION en sw.js
 
 const APP = {
   perfil: null,          // { codigo, entidad, nombre, tipo_doc, num_doc, id_evaluador, matricula, dependencia }
@@ -206,9 +206,20 @@ async function apiDemo(accion, p) {
   const leer = async () => (await DB.leerKV('demo-servidor')) || { n: 0, evaluaciones: {} };
   const s = await leer();
   switch (accion) {
-    case 'ingresar':
-      if (!p.codigo) throw new Error('Escriba un código');
-      return { ok: true, entidad: CONFIG.ENTIDAD, esquema: Esquema.huella() };
+    case 'listas':
+      return { ok: true, listas: s.listas || { entidades: [CONFIG.ENTIDAD_FICHA], dependencias: [{ valor: CONFIG.DEPENDENCIA, entidad: CONFIG.ENTIDAD_FICHA }] } };
+    case 'ingresar': {
+      if (!p.codigo && !APP.perfil) throw new Error('Escriba un código');
+      // Imitación sencilla de la lista del servidor: agrega lo nuevo, sin duplicar por mayúsculas o tildes.
+      const l = s.listas || { entidades: [CONFIG.ENTIDAD_FICHA], dependencias: [{ valor: CONFIG.DEPENDENCIA, entidad: CONFIG.ENTIDAD_FICHA }] };
+      const igual = (a, b) => Esquema.normalizarTexto(a) === Esquema.normalizarTexto(b);
+      let ent = p.entidad_ficha, dep = p.dependencia;
+      if (ent) { const e = l.entidades.find((x) => igual(x, ent)); if (e) ent = e; else l.entidades.push(ent); }
+      if (dep) { const d = l.dependencias.find((x) => igual(x.valor, dep)); if (d) dep = d.valor; else l.dependencias.push({ valor: dep, entidad: ent }); }
+      s.listas = l;
+      await DB.guardarKV('demo-servidor', s);
+      return { ok: true, entidad: CONFIG.ENTIDAD, entidad_ficha: ent, dependencia: dep, listas: l, esquema: Esquema.huella() };
+    }
     case 'catalogo':
       return { ok: true, solicitudes: SOLICITUDES_DEMO, evaluaciones: Object.values(s.evaluaciones), esquema: Esquema.huella() };
     case 'guardar_evaluacion': {

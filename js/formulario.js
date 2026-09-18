@@ -38,8 +38,9 @@ async function aplicarPerfil(idEval, d) {
   d.eval_tipo_doc = p.tipo_doc || 'cc';
   d.eval_num_doc = p.num_doc || '';
   d.eval_matricula = p.matricula || '';
-  d.eval_entidad = CONFIG.ENTIDAD_FICHA;
-  d.eval_dependencia = CONFIG.DEPENDENCIA;
+  // Los perfiles de antes de los desplegables no las tienen: Alcaldía de Pereira / DIGER.
+  d.eval_entidad = p.entidad_ficha || CONFIG.ENTIDAD_FICHA;
+  d.eval_dependencia = p.dependencia || CONFIG.DEPENDENCIA;
   delete d.eval_id;
   d.eval_firma = await ponerFirmaEnEvaluacion(idEval, p.firma);
   return d;

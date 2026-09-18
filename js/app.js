@@ -22,6 +22,7 @@ async function iniciar() {
   // Que el navegador no borre la base local cuando se llene el celular.
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 
+  await cargarListas();
   APP.perfil = await DB.leerKV('perfil');
   if (!APP.perfil) { mostrarIngreso(); return; }
   entrarApp();

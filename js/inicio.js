@@ -174,8 +174,88 @@ const CAMPOS_PERFIL = [
   ['num_doc', 'Número de documento', 'numeric', true],
   ['matricula', 'Matrícula / tarjeta profesional', 'text', false]
 ];
-// Entidad (Alcaldía de Pereira) y dependencia (DIGER) son fijas: salen de
-// config.js y no se preguntan.
+
+// ---------------------------------------------------------------- ENTIDAD Y DEPENDENCIA
+/**
+ * Desplegables que se van acotando: la lista vive en la pestaña LISTAS de
+ * la hoja y crece cuando alguien escribe una nueva con "Otra…". El
+ * servidor la normaliza (tildes, mayúsculas, variantes marcadas por la
+ * DIGER). Aquí se guarda la última lista conocida para trabajar sin señal.
+ */
+const OTRA = '__otra__';
+const LISTAS_BASE = { entidades: [CONFIG.ENTIDAD_FICHA], dependencias: [{ valor: CONFIG.DEPENDENCIA, entidad: CONFIG.ENTIDAD_FICHA }] };
+APP.listas = LISTAS_BASE;
+
+async function cargarListas() {
+  const guardadas = await DB.leerKV('listas');
+  if (guardadas && guardadas.entidades) APP.listas = guardadas;
+}
+
+async function guardarListas(l) {
+  if (!l || !Array.isArray(l.entidades)) return;
+  APP.listas = l;
+  await DB.guardarKV('listas', l);
+}
+
+/** Pide la lista al servidor (no necesita código). Sin señal, se queda con la guardada. */
+async function refrescarListas() {
+  try { const r = await api('listas', {}, 20000); await guardarListas(r.listas); } catch (e) { /* sin señal */ }
+}
+
+const mismaClave = (a, b) => Esquema.normalizarTexto(a) === Esquema.normalizarTexto(b);
+
+function opcionesDe(valores, actual) {
+  const hay = valores.some((v) => mismaClave(v, actual));
+  return '<option value="">— Elegir —</option>' +
+    valores.map((v) => '<option' + (mismaClave(v, actual) ? ' selected' : '') + '>' + esc(v) + '</option>').join('') +
+    '<option value="' + OTRA + '"' + (actual && !hay ? ' selected' : '') + '>Otra… (escribirla)</option>';
+}
+
+function dependenciasDe(entidad) {
+  return APP.listas.dependencias.filter((d) => !d.entidad || mismaClave(d.entidad, entidad)).map((d) => d.valor);
+}
+
+/** Dos desplegables (entidad → dependencia) con su casilla "Otra…". */
+function htmlEntidadDependencia(p) {
+  // Sin nada guardado arranca en Alcaldía de Pereira / DIGER: son casi todos los usuarios.
+  const ent = p.entidad_ficha || CONFIG.ENTIDAD_FICHA;
+  const dep = p.dependencia || (p.entidad_ficha ? '' : CONFIG.DEPENDENCIA);
+  const entEnLista = APP.listas.entidades.some((v) => mismaClave(v, ent));
+  const deps = dependenciasDe(ent);
+  const depEnLista = deps.some((v) => mismaClave(v, dep));
+  return '<label>Entidad <span class="req">*</span><select name="entidad_sel" data-lista="entidad">' + opcionesDe(APP.listas.entidades, ent) + '</select></label>' +
+    '<label data-otra="entidad"' + (ent && !entEnLista ? '' : ' hidden') + '>¿Cuál entidad?<input name="entidad_otra" maxlength="120" value="' + esc(entEnLista ? '' : ent) + '" autocomplete="off"></label>' +
+    '<label>Dependencia <span class="req">*</span><select name="dependencia_sel" data-lista="dependencia">' + opcionesDe(deps, dep) + '</select></label>' +
+    '<label data-otra="dependencia"' + (dep && !depEnLista ? '' : ' hidden') + '>¿Cuál dependencia?<input name="dependencia_otra" maxlength="120" value="' + esc(depEnLista ? '' : dep) + '" autocomplete="off"></label>' +
+    '<p class="c-nota">Si no aparece la suya, elija «Otra…» y escríbala: queda en la lista para todos.</p>';
+}
+
+/** Al cambiar la entidad se rearma la lista de dependencias; "Otra…" abre la casilla para escribir. */
+function enlazarEntidadDependencia(form) {
+  const selEnt = form.elements.entidad_sel, selDep = form.elements.dependencia_sel;
+  const mostrar = () => {
+    form.querySelector('[data-otra="entidad"]').hidden = selEnt.value !== OTRA;
+    form.querySelector('[data-otra="dependencia"]').hidden = selDep.value !== OTRA;
+  };
+  selEnt.addEventListener('change', () => {
+    const ent = selEnt.value === OTRA ? '' : selEnt.value;
+    const deps = ent ? dependenciasDe(ent) : [];
+    const antes = selDep.value;
+    selDep.innerHTML = opcionesDe(deps, deps.some((v) => v === antes) ? antes : '');
+    if (selEnt.value === OTRA) selDep.value = OTRA;       // entidad nueva: su dependencia también se escribe
+    else if (deps.length === 1 && !selDep.value) selDep.value = deps[0];
+    mostrar();
+  });
+  selDep.addEventListener('change', mostrar);
+  mostrar();
+}
+
+function leerEntidadDependencia(form) {
+  const ent = form.elements.entidad_sel.value === OTRA ? form.elements.entidad_otra.value : form.elements.entidad_sel.value;
+  const dep = form.elements.dependencia_sel.value === OTRA ? form.elements.dependencia_otra.value : form.elements.dependencia_sel.value;
+  const limpio = (t) => String(t || '').replace(/\s+/g, ' ').trim();
+  return { entidad_ficha: limpio(ent), dependencia: limpio(dep) };
+}
 
 /** Firma dibujada en esta pantalla y aún no guardada en el perfil. */
 let firmaPendiente = null;
@@ -185,8 +265,6 @@ function pintarFirmas(dataUrl) {
     el.innerHTML = dataUrl ? '<img src="' + dataUrl + '" alt="Firma">' : '<span class="c-nota">Aún no ha firmado</span>';
   });
   $$('[data-firmar]').forEach((b) => { b.textContent = dataUrl ? 'Firmar de nuevo' : 'Firmar'; });
-  $$('[data-entidad-fija]').forEach((el) => { el.textContent = CONFIG.ENTIDAD_FICHA; });
-  $$('[data-dependencia-fija]').forEach((el) => { el.textContent = CONFIG.DEPENDENCIA; });
 }
 
 function htmlCamposPerfil(p) {
@@ -198,19 +276,27 @@ function htmlCamposPerfil(p) {
     }
     return '<label>' + et + (req ? ' <span class="req">*</span>' : '') + '<input name="' + k + '" ' +
       (tipo === 'numeric' ? 'inputmode="numeric" ' : '') + (req ? 'required ' : '') + 'value="' + esc(p[k] || '') + '" autocomplete="off"></label>';
-  }).join('');
+  }).join('') + htmlEntidadDependencia(p);
 }
 
 function leerPerfil(form) {
   const p = {};
   CAMPOS_PERFIL.forEach(([k]) => { p[k] = (form.elements[k].value || '').trim(); });
-  return p;
+  return Object.assign(p, leerEntidadDependencia(form));
 }
 
 function mostrarIngreso() {
   $$('section.vista').forEach((v) => { v.hidden = true; });
   $('#vista-ingreso').hidden = false;
-  $('#ingreso-perfil').innerHTML = htmlCamposPerfil(APP.perfilAnterior);
+  const pintar = () => {
+    const form = $('#form-ingreso');
+    // Conserva lo que ya haya escrito si la lista llega mientras llena.
+    const escrito = form.elements.nombre ? leerPerfil(form) : null;
+    $('#ingreso-perfil').innerHTML = htmlCamposPerfil(Object.assign({}, APP.perfilAnterior || {}, escrito || {}));
+    enlazarEntidadDependencia(form);
+  };
+  pintar();
+  refrescarListas().then(pintar);
   firmaPendiente = null;
   pintarFirmas(APP.perfilAnterior && APP.perfilAnterior.firma);
   $('#modo-demo').hidden = !CONFIG.DEMO;
@@ -222,13 +308,18 @@ async function ingresar(ev) {
   const codigo = form.elements.codigo.value.trim();
   const perfil = leerPerfil(form);
   if (!codigo) { toast('Escriba el código de acceso', 'error'); return; }
+  if (!perfil.entidad_ficha || !perfil.dependencia) { toast('Elija o escriba su entidad y su dependencia.', 'error'); return; }
   const firma = firmaPendiente || (APP.perfilAnterior && APP.perfilAnterior.firma);
   if (!firma) { toast('Falta su firma: toque "Firmar".', 'error'); return; }
   perfil.firma = firma;
   cargando(true, 'Verificando el código…');
   try {
     APP.perfil = { codigo };                          // api() lo necesita para mandarlo
-    const r = await api('ingresar', { codigo });
+    const r = await api('ingresar', { codigo, nombre: perfil.nombre, entidad_ficha: perfil.entidad_ficha, dependencia: perfil.dependencia });
+    // El servidor devuelve los nombres oficiales (normalizados) y la lista al día.
+    if (r.entidad_ficha) perfil.entidad_ficha = r.entidad_ficha;
+    if (r.dependencia) perfil.dependencia = r.dependencia;
+    await guardarListas(r.listas);
     APP.perfil = Object.assign(perfil, { codigo, entidad: r.entidad || CONFIG.ENTIDAD });
     await DB.guardarKV('perfil', APP.perfil);
     entrarApp();
@@ -258,6 +349,7 @@ function abrirMenu() {
   $('#menu-nombre').textContent = p.nombre || '';
   $('#menu-entidad').textContent = p.entidad + (CONFIG.DEMO ? ' · demostración' : '');
   $('#perfil-campos').innerHTML = htmlCamposPerfil(p);
+  enlazarEntidadDependencia($('#form-perfil'));
   pintarCompartir();
   firmaPendiente = null;
   pintarFirmas(p.firma);
@@ -281,8 +373,19 @@ function enlazarMenu() {
   $('#menu-cerrar').addEventListener('click', cerrarMenu);
   $('#form-perfil').addEventListener('submit', async (ev) => {
     ev.preventDefault();
-    Object.assign(APP.perfil, leerPerfil(ev.target));
+    const nuevo = leerPerfil(ev.target);
+    if (!nuevo.entidad_ficha || !nuevo.dependencia) { toast('Elija o escriba su entidad y su dependencia.', 'error'); return; }
+    Object.assign(APP.perfil, nuevo);
     if (firmaPendiente) APP.perfil.firma = firmaPendiente;
+    // Con señal, se normaliza y entra a la lista de una vez; sin señal, se
+    // normaliza cuando llegue la primera evaluación.
+    api('ingresar', { nombre: APP.perfil.nombre, entidad_ficha: APP.perfil.entidad_ficha, dependencia: APP.perfil.dependencia })
+      .then(async (r) => {
+        if (r.entidad_ficha) APP.perfil.entidad_ficha = r.entidad_ficha;
+        if (r.dependencia) APP.perfil.dependencia = r.dependencia;
+        await DB.guardarKV('perfil', APP.perfil);
+        await guardarListas(r.listas);
+      }).catch(() => {});
     await DB.guardarKV('perfil', APP.perfil);
     toast('Datos guardados. Se usarán en sus evaluaciones sin enviar.', 'ok');
     cerrarMenu();

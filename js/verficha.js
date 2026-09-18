@@ -97,7 +97,8 @@
     var avisos = [];
     if (r.estado && r.estado !== 'COMPLETA') avisos.push('Estado del envío: ' + r.estado);
     if (!r.completa) avisos.push('Versión pública: se ocultan el teléfono del contacto, los números de documento y la firma. La completa se ve desde la app de la DIGER.');
-    $('#contenido').innerHTML = Ficha.html(r.datos, { logos: LOGOS, fotos: r.fotos, firma: r.firma, firmaTexto: r.firmaTexto, aviso: avisos.join(' · '), cuerpoSolo: true });
+    $('#contenido').innerHTML = Ficha.html(r.datos, { logos: LOGOS, fotos: r.fotos, firma: r.firma, firmaTexto: r.firmaTexto,
+      aviso: avisos.join(' · '), enlace: location.href, cuerpoSolo: true });
     document.title = 'Formulario ' + r.num_formulario + ' · DIGER';
     enlazarBarra(r.num_formulario);
     ajustar();

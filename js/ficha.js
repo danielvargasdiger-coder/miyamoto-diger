@@ -90,7 +90,7 @@ var Ficha = (function () {
       '<td class="pie-izq">' + (L.pie ? '<img src="' + L.pie + '" alt="">' : '') + '</td>' +
       '<td class="pie-cen">Número consecutivo: <b>' + esc(consecutivo) + '</b></td>' +
       '<td class="pie-der"><b>Versión:</b> ' + esc(E.FORMATO) + '</td>' +
-      '</tr></table>';
+      '</tr></table>' + rastro(o);
   }
 
   // ---------------------------------------------------------------- SECCIONES
@@ -337,6 +337,59 @@ var Ficha = (function () {
       '</table></div>';
   }
 
+  // ---------------------------------------------------------------- AVISO LEGAL
+  /**
+   * Aviso legal de la ficha. Adaptado del que ya usan las fichas del EDR
+   * (CDGRD Risaralda) a la DIGER, más un punto de datos personales (Ley 1581
+   * de 2012), porque la ficha lleva teléfonos, documentos y firma.
+   * Pedido del 18/09. Va al final de la página 2, en letra pequeña, para no
+   * agregar hojas; también sale en la ficha en línea y en el PDF.
+   */
+  var AVISO_LEGAL = [
+    ['Carácter preliminar', 'Esta ficha corresponde a una evaluación rápida por inspección visual practicada en el marco de la gestión del riesgo y la atención de emergencias. Es preliminar y está sujeta a modificación por evaluaciones posteriores.'],
+    ['Alcance técnico', 'No constituye estudio de vulnerabilidad estructural, peritaje ni concepto técnico definitivo.'],
+    ['Efectos', 'Las categorías Habitable, Uso restringido y No habitable son recomendaciones técnicas de seguridad. No constituyen acto administrativo ni generan, por sí solas, orden de desalojo, declaratoria de ruina, autorización de demolición ni derecho a subsidio, ayuda o reubicación, ni sustituyen los registros de la autoridad competente.'],
+    ['Vigencia', 'El registro oficial es el que administra la DIGER de la Alcaldía de Pereira. Las impresiones, capturas y copias reflejan únicamente el estado de la información al momento de obtenerlas.'],
+    ['Datos personales', 'Los datos personales aquí contenidos se tratan conforme a la Ley 1581 de 2012 y sus normas reglamentarias, con la única finalidad de la gestión del riesgo de desastres. Se prohíbe su divulgación o uso para fines distintos.'],
+    ['Exoneración de responsabilidad', 'La entidad no se hace responsable por el uso indebido, la interpretación errónea, la alteración o la reproducción fuera de contexto de esta información, ni por las decisiones que terceros adopten con fundamento en ella.'],
+    ['Consultas y reclamaciones', 'Las solicitudes de corrección o actualización deben presentarse ante la DIGER – Alcaldía de Pereira por los canales oficiales de atención al ciudadano.']
+  ];
+
+  /** Un solo párrafo numerado: ocupa la mitad que una lista y cabe en la página 2. */
+  function avisoLegal() {
+    return '<div class="caja legal"><b class="legal-tit">AVISO LEGAL.</b> ' +
+      AVISO_LEGAL.map(function (x, i) { return '<b>' + (i + 1) + '. ' + esc(x[0]) + '.</b> ' + esc(x[1]); }).join(' ') +
+      '</div>';
+  }
+
+  // ---------------------------------------------------------------- FECHA DE CONSULTA
+  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+  /** "18 de septiembre de 2026, 15:32" en hora de Colombia (UTC-5), sin importar dónde se abra. */
+  function ahoraColombia(fecha) {
+    var c = new Date((fecha ? fecha.getTime() : Date.now()) - 5 * 3600000);
+    var p = function (x) { return ('0' + x).slice(-2); };
+    return c.getUTCDate() + ' de ' + MESES[c.getUTCMonth()] + ' de ' + c.getUTCFullYear() + ', ' +
+      p(c.getUTCHours()) + ':' + p(c.getUTCMinutes());
+  }
+
+  /**
+   * Sello de consulta, como en las fichas del EDR (CDGRD): cuándo se sacaron
+   * los datos. Una impresión o captura queda fechada; los datos pueden
+   * cambiar después. o.sello cambia el texto (p. ej. en la vista previa).
+   */
+  function selloConsulta(o) {
+    if (o.sello === false) return '';
+    return '<div class="sello">' + (o.sello ? esc(o.sello) : 'Datos consultados el <b>' + esc(o.consultado) + '</b> · Esta ficha se genera ' +
+      'en el momento de abrirla y siempre muestra la información vigente en la base de datos de la DIGER – Alcaldía de Pereira.') + '</div>';
+  }
+
+  function rastro(o) {
+    if (o.sello === false) return '';
+    return '<div class="rastro">' + (o.sello ? esc(o.sello) : 'Consultado el ' + esc(o.consultado) + '.' +
+      (o.enlace ? ' Fuente: ' + esc(o.enlace) + '.' : '') + ' Los datos pueden haber cambiado después de esta fecha.') + '</div>';
+  }
+
   // ---------------------------------------------------------------- ANEXO
   /**
    * Hoja anexa: solo cuando el evaluador clasificó MENOS grave que la
@@ -365,19 +418,19 @@ var Ficha = (function () {
 
   // ---------------------------------------------------------------- CSS
   var CSS =
-    '@page{size:letter;margin:10mm}' +
+    '@page{size:letter;margin:8mm 9mm}' +
     '*{box-sizing:border-box}' +
     'body{margin:0;font-family:Arial,Helvetica,sans-serif;font-size:8pt;color:#000;background:#fff}' +
     '.pagina{width:196mm;margin:0 auto}' +
     '.salto{page-break-before:always;break-before:page}' +
     '.aviso{background:#fff3cd;border:1px solid #d9a400;padding:6px 8px;margin:0 auto 6px;max-width:196mm;font-size:9pt}' +
-    '.enc{width:100%;border-collapse:collapse;margin-bottom:4px}' +
+    '.enc{width:100%;border-collapse:collapse;margin-bottom:2px}' +
     '.enc td{vertical-align:middle}' +
     '.enc-izq{width:24%}.enc-der{width:24%;text-align:right}' +
-    '.enc-izq img,.enc-der img{max-width:100%;max-height:14mm}' +
+    '.enc-izq img,.enc-der img{max-width:100%;max-height:12mm}' +
     '.enc-cen{text-align:center;font-weight:bold;font-size:11pt;line-height:1.35}' +
     '.enc-sub{font-weight:normal;font-size:9pt}' +
-    '.pie{width:100%;border-collapse:collapse;margin-top:4px;font-size:8pt}' +
+    '.pie{width:100%;border-collapse:collapse;margin-top:2px;font-size:7.6pt}' +
     '.pie-izq img{max-height:7mm}.pie-cen{text-align:center}.pie-der{text-align:right}' +
     '.caja{border:1.3px solid #000;padding:1px 5px 3px;margin-bottom:3px;page-break-inside:avoid;break-inside:avoid}' +
     '.tit{text-align:center;font-weight:bold;font-size:9pt;margin:1px 0 2px}' +
@@ -399,14 +452,18 @@ var Ficha = (function () {
     '.sis td.l{width:22%}' +
     '.dano td.l{white-space:normal;width:auto}' +
     '.esq-t{border:1px solid #000;font-weight:bold;width:50%}' +
-    '.cuad{border:1px solid #000;height:62mm;vertical-align:middle;text-align:center;' +
+    '.cuad{border:1px solid #000;height:46mm;vertical-align:middle;text-align:center;' +
       'background-image:linear-gradient(#ddd 1px,transparent 1px),linear-gradient(90deg,#ddd 1px,transparent 1px);background-size:5mm 5mm}' +
-    '.cuad img{max-width:100%;max-height:60mm;background:#fff}' +
-    '.texto{min-height:12mm;padding:2px;white-space:pre-wrap}' +
+    '.cuad img{max-width:100%;max-height:44mm;background:#fff}' +
+    '.texto{min-height:9mm;padding:2px;white-space:pre-wrap}' +
     '.firma{font-style:italic}.img-firma{max-height:16mm;max-width:60mm;display:block}' +
     '.fotos td.foto{width:50%;text-align:center;vertical-align:top;padding:3px}' +
     '.fotos img{max-width:100%;max-height:85mm}' +
     '.pie-foto{font-size:8pt;margin-top:2px}' +
+    '.legal{padding:2px 6px 3px;font-size:6pt;line-height:1.2;color:#222;text-align:justify}' +
+    '.legal-tit{font-size:6.6pt}' +
+    '.sello{border-left:3px solid #1F4E79;background:#EEF3F8;padding:3px 7px;margin-bottom:3px;font-size:7.2pt;color:#333}' +
+    '.rastro{font-size:5.6pt;color:#444;text-align:center;margin-top:0;overflow-wrap:anywhere;line-height:1.15}' +
     '@media screen{body{background:#eef1f4;padding:10px 6px}.pagina{background:#fff;padding:8px;box-shadow:0 1px 4px rgba(0,0,0,.2);margin-bottom:12px}}' +
     '@media screen{.aviso{width:196mm}}' +
     '@media print{.no-imprimir{display:none}.pagina,.aviso{zoom:1!important}}';
@@ -429,11 +486,12 @@ var Ficha = (function () {
     cargarEsquema();
     d = d || {}; o = o || {};
     var consecutivo = d.num_formulario || '(sin asignar)';
-    var p1 = '<div class="pagina">' + encabezado(o, consecutivo) +
+    o.consultado = o.consultado || ahoraColombia();
+    var p1 = '<div class="pagina">' + encabezado(o, consecutivo) + selloConsulta(o) +
       '<table class="t mitades"><tr><td>' + s1(d) + '</td><td>' + s2(d) + s3(d) + '</td></tr></table>' +
       s4(d) + s5(d) + s6(d) + s7y8(d) + s9(d) + pie(o, consecutivo) + '</div>';
     var p2 = '<div class="pagina salto">' + encabezado(o, consecutivo) +
-      s10(d) + s11(d, o) + s12(d) + s13(d) + s14(d) + s15(d) + s16(d, o) + pie(o, consecutivo) + '</div>';
+      s10(d) + s11(d, o) + s12(d) + s13(d) + s14(d) + s15(d) + s16(d, o) + avisoLegal() + pie(o, consecutivo) + '</div>';
     var cuerpo = (o.aviso ? '<div class="aviso no-imprimir">' + esc(o.aviso) + '</div>' : '') + p1 + p2 + anexo(d, o, consecutivo);
     if (o.cuerpoSolo) return '<style>' + CSS + '</style>' + cuerpo;
     return '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">' +
@@ -442,7 +500,7 @@ var Ficha = (function () {
       (o.sinAjuste ? '' : AJUSTE) + '</body></html>';
   }
 
-  return { html: html, esc: esc, fechaPartes: fechaPartes };
+  return { html: html, esc: esc, fechaPartes: fechaPartes, ahoraColombia: ahoraColombia };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = Ficha;

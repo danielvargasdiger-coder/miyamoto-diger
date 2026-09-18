@@ -531,7 +531,8 @@ async function abrirVistaPrevia(idEval, datos, aviso) {
   cargando(true, 'Armando la ficha…');
   try {
     const { fotos, firma } = await fotosParaFicha(idEval, datos);
-    const html = Ficha.html(Esquema.limpiarOcultos(datos), { logos: LOGOS_FICHA, fotos, firma, aviso });
+    const html = Ficha.html(Esquema.limpiarOcultos(datos), { logos: LOGOS_FICHA, fotos, firma, aviso,
+      sello: 'Vista previa generada en el celular el ' + Ficha.ahoraColombia() + '. Aún no se ha enviado a la DIGER; no es una ficha oficial.' });
     const marco = $('#previa-marco');
     marco.srcdoc = html;
     $('#vista-previa').hidden = false;

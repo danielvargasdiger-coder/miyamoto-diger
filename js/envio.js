@@ -23,7 +23,7 @@ async function datosParaEnviar(id, datos) {
   const fotos = [];
   for (const k of Object.keys(d)) {
     const c = Esquema.CAMPOS[k];
-    if (!c || (c.tipo !== 'fotos' && c.tipo !== 'croquis')) continue;
+    if (!c || (c.tipo !== 'fotos' && c.tipo !== 'firma')) continue;
     const registros = (await Promise.all((d[k] || []).map((clave) => DB.leer('fotos', clave)))).filter(Boolean);
     d[k] = registros.map((f) => f.nombre);
     registros.forEach((f) => fotos.push({ clave: f.clave, campo: k, nombre: f.nombre }));

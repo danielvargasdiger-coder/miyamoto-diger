@@ -15,7 +15,7 @@ async function iniciar() {
   enlazarDescargas();
   $$('[data-vista]').forEach((b) => b.addEventListener('click', () => irAVista(b.dataset.vista)));
   iniciarEventosFicha();
-  iniciarEventosCroquis();
+  iniciarEventosFirma();
   $('#form-ingreso').addEventListener('submit', ingresar);
   registrarSW();
 

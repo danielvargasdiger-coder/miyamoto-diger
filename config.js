@@ -38,15 +38,16 @@ var CONFIG = (function () {
     NOMBRE_APP: 'Evaluación de daños',
     ENTIDAD: 'DIGER Pereira',
 
+    /** Lo que sale en la sección 16 de la ficha. Fijo: no se le pregunta al ingeniero. */
+    ENTIDAD_FICHA: 'Alcaldía de Pereira',
+    DEPENDENCIA: 'DIGER',
+
     /** Dirección pública para compartir (y para el QR, cuando se haga). */
     URL_PUBLICA: 'https://danielvargasdiger-coder.github.io/miyamoto-diger/',
 
     /** Fotos: mismo punto medido en taludes (1200 px / 0.60 ~ 237 KB por foto). */
     ANCHO_MAX_FOTO: 1200,
     CALIDAD_FOTO: 0.60,
-
-    /** Croquis: se guarda en PNG a este ancho. */
-    ANCHO_CROQUIS: 1000,
 
     MINUTOS_AUTOSYNC: 10,
     MINUTOS_BUSCAR_ACTUALIZACION: 15,

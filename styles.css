@@ -270,7 +270,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 }
 .fotos-botones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
 .fotos-botones label { display: inline-flex; cursor: pointer; }
-.croquis-vista img { max-width: 100%; max-height: 240px; border: 1px solid var(--borde); border-radius: 8px; display: block; background: #fff; }
 
 .gps-dato { display: flex; flex-direction: column; padding: 10px 12px; border-radius: 8px; background: #eef2f5; border-left: 4px solid var(--borde); }
 .gps-dato span { font-size: .85rem; color: var(--texto-suave); }
@@ -314,8 +313,25 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .croquis-herramientas { flex: none; display: flex; gap: 6px; padding: 8px 12px; background: #fff; border-bottom: 1px solid var(--borde); flex-wrap: wrap; justify-content: center; }
 .btn-herr { min-height: 40px; padding: 6px 14px; border-radius: 8px; border: 1.5px solid var(--borde); background: #fff; font-weight: 600; cursor: pointer; }
 .btn-herr[aria-pressed="true"] { background: var(--azul); border-color: var(--azul); color: #fff; }
-.croquis-zona { flex: 1; padding: 10px; display: flex; min-height: 0; }
-.croquis-zona canvas { flex: 1; width: 100%; height: 100%; border: 1px solid var(--borde); border-radius: 6px; background: #fff; touch-action: none; }
+
+/* ------------------------------------------------------------ FIRMA */
+/* Por encima del menú: se abre desde "Mis datos" y desde el ingreso. */
+.pantalla.firma { z-index: 75; }
+.firma-zona { flex: 1; min-height: 0; display: grid; place-items: center; padding: 16px; }
+.firma-zona canvas { background: #fff; border: 1.5px dashed var(--borde); border-radius: 10px; touch-action: none; max-width: 100%; }
+.firma-campo { display: grid; gap: 6px; }
+.firma-campo .c-etiqueta { margin: 0; font-size: .92rem; }
+.firma-muestra { min-height: 64px; display: grid; place-items: center start; background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 6px 10px; }
+.firma-muestra img { max-height: 80px; max-width: 100%; display: block; }
+
+/* Sección 16: solo lectura */
+.solo-lectura { display: grid; gap: 0; padding: 4px 14px; margin-bottom: 12px; }
+.dato { display: grid; grid-template-columns: minmax(0, 40%) 1fr; gap: 10px; padding: 9px 0; border-bottom: 1px solid #edf1f4; align-items: center; }
+.dato:last-child { border-bottom: 0; }
+.dato-et { color: var(--texto-suave); font-size: .9rem; }
+.dato-v { font-weight: 600; overflow-wrap: anywhere; }
+.dato-v .firma-muestra { border: 0; padding: 0; min-height: 0; }
+.dato-v .error { margin: 0; }
 
 /* ------------------------------------------------------------ VISTA PREVIA */
 .previa-marco { flex: 1; width: 100%; border: 0; background: #eef1f4; }

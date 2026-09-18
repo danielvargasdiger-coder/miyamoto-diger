@@ -34,6 +34,12 @@
         </label>
         <p class="c-nota">Sus datos se llenan solos en cada evaluación (sección 16). Puede cambiarlos después en el menú.</p>
         <div id="ingreso-perfil" class="perfil-campos"></div>
+        <div class="firma-campo">
+          <span class="c-etiqueta">Firma <span class="req">*</span></span>
+          <div class="firma-muestra" data-firma-muestra><span class="c-nota">Aún no ha firmado</span></div>
+          <button type="button" class="btn-secundario" data-firmar>Firmar</button>
+        </div>
+        <p class="c-nota">Entidad: <b data-entidad-fija></b> · Dependencia: <b data-dependencia-fija></b></p>
         <button type="submit" class="btn-principal">Ingresar</button>
       </form>
     </div>
@@ -117,22 +123,20 @@
     </footer>
   </section>
 
-  <!-- ============================================================ CROQUIS -->
-  <section id="vista-croquis" class="vista pantalla croquis" hidden>
+  <!-- ============================================================ FIRMA -->
+  <section id="vista-firma" class="vista pantalla firma" hidden>
     <header class="ficha-cab">
-      <button type="button" id="croquis-cancelar" class="btn-icono" aria-label="Cancelar">
+      <button type="button" id="firma-cancelar" class="btn-icono" aria-label="Cancelar">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
-      <div class="ficha-cab-texto"><b id="croquis-titulo">Esquema</b><span>Dibuje con el dedo sobre la cuadrícula</span></div>
-      <button type="button" id="croquis-guardar" class="btn-claro">Listo</button>
+      <div class="ficha-cab-texto"><b>Su firma</b><span>Firme con el dedo. Saldrá en todas sus fichas.</span></div>
+      <button type="button" id="firma-guardar" class="btn-claro">Listo</button>
     </header>
     <div class="croquis-herramientas">
-      <button type="button" data-modo="lapiz" class="btn-herr">Lápiz</button>
-      <button type="button" data-modo="borrador" class="btn-herr">Borrador</button>
-      <button type="button" id="croquis-deshacer" class="btn-herr">Deshacer</button>
-      <button type="button" id="croquis-limpiar" class="btn-herr">Limpiar</button>
+      <button type="button" id="firma-deshacer" class="btn-herr">Deshacer</button>
+      <button type="button" id="firma-limpiar" class="btn-herr">Borrar todo</button>
     </div>
-    <div class="croquis-zona"><canvas id="croquis-lienzo"></canvas></div>
+    <div class="firma-zona"><canvas id="firma-lienzo"></canvas></div>
   </section>
 
   <!-- ============================================================ VISTA PREVIA -->
@@ -159,6 +163,12 @@
       <div class="menu-yo"><span id="menu-iniciales" class="iniciales"></span><div><b id="menu-nombre"></b><span id="menu-entidad"></span></div></div>
       <form id="form-perfil" class="tarjeta">
         <div id="perfil-campos" class="perfil-campos"></div>
+        <div class="firma-campo">
+          <span class="c-etiqueta">Firma</span>
+          <div class="firma-muestra" data-firma-muestra></div>
+          <button type="button" class="btn-secundario" data-firmar>Firmar de nuevo</button>
+        </div>
+        <p class="c-nota">Entidad: <b data-entidad-fija></b> · Dependencia: <b data-dependencia-fija></b></p>
         <button type="submit" class="btn-principal">Guardar mis datos</button>
       </form>
       <section class="tarjeta descargas">

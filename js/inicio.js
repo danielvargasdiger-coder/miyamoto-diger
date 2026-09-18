@@ -172,10 +172,22 @@ const CAMPOS_PERFIL = [
   ['nombre', 'Nombre completo', 'text', true],
   ['tipo_doc', 'Tipo de documento', 'doc', true],
   ['num_doc', 'Número de documento', 'numeric', true],
-  ['matricula', 'Matrícula / tarjeta profesional', 'text', false],
-  ['id_evaluador', 'ID evaluador (registro de evaluadores)', 'text', false],
-  ['dependencia', 'Dependencia', 'text', false]
+  ['matricula', 'Matrícula / tarjeta profesional', 'text', false]
 ];
+// Entidad (Alcaldía de Pereira) y dependencia (DIGER) son fijas: salen de
+// config.js y no se preguntan.
+
+/** Firma dibujada en esta pantalla y aún no guardada en el perfil. */
+let firmaPendiente = null;
+
+function pintarFirmas(dataUrl) {
+  $$('[data-firma-muestra]').forEach((el) => {
+    el.innerHTML = dataUrl ? '<img src="' + dataUrl + '" alt="Firma">' : '<span class="c-nota">Aún no ha firmado</span>';
+  });
+  $$('[data-firmar]').forEach((b) => { b.textContent = dataUrl ? 'Firmar de nuevo' : 'Firmar'; });
+  $$('[data-entidad-fija]').forEach((el) => { el.textContent = CONFIG.ENTIDAD_FICHA; });
+  $$('[data-dependencia-fija]').forEach((el) => { el.textContent = CONFIG.DEPENDENCIA; });
+}
 
 function htmlCamposPerfil(p) {
   p = p || {};
@@ -199,6 +211,8 @@ function mostrarIngreso() {
   $$('section.vista').forEach((v) => { v.hidden = true; });
   $('#vista-ingreso').hidden = false;
   $('#ingreso-perfil').innerHTML = htmlCamposPerfil(APP.perfilAnterior);
+  firmaPendiente = null;
+  pintarFirmas(APP.perfilAnterior && APP.perfilAnterior.firma);
   $('#modo-demo').hidden = !CONFIG.DEMO;
 }
 
@@ -208,6 +222,9 @@ async function ingresar(ev) {
   const codigo = form.elements.codigo.value.trim();
   const perfil = leerPerfil(form);
   if (!codigo) { toast('Escriba el código de acceso', 'error'); return; }
+  const firma = firmaPendiente || (APP.perfilAnterior && APP.perfilAnterior.firma);
+  if (!firma) { toast('Falta su firma: toque "Firmar".', 'error'); return; }
+  perfil.firma = firma;
   cargando(true, 'Verificando el código…');
   try {
     APP.perfil = { codigo };                          // api() lo necesita para mandarlo
@@ -241,23 +258,35 @@ function abrirMenu() {
   $('#menu-nombre').textContent = p.nombre || '';
   $('#menu-entidad').textContent = p.entidad + (CONFIG.DEMO ? ' · demostración' : '');
   $('#perfil-campos').innerHTML = htmlCamposPerfil(p);
+  firmaPendiente = null;
+  pintarFirmas(p.firma);
   $('#menu-version').textContent = 'Versión ' + VERSION_APP + ' · formulario ' + Esquema.VERSION +
     (APP.huellaServidor && APP.huellaServidor !== Esquema.huella() ? ' · ⚠ el servidor tiene otro esquema' : '');
   $('#vista-menu').hidden = false;
   document.body.classList.add('sin-scroll');
 }
 
-function cerrarMenu() { $('#vista-menu').hidden = true; document.body.classList.remove('sin-scroll'); }
+function cerrarMenu() {
+  $('#vista-menu').hidden = true;
+  if ($('#vista-ficha').hidden) document.body.classList.remove('sin-scroll');
+}
 
 function enlazarMenu() {
+  $$('[data-firmar]').forEach((b) => b.addEventListener('click', () => abrirFirma((dataUrl) => {
+    firmaPendiente = dataUrl;
+    pintarFirmas(dataUrl);
+  })));
   $('#btn-menu').addEventListener('click', abrirMenu);
   $('#menu-cerrar').addEventListener('click', cerrarMenu);
   $('#form-perfil').addEventListener('submit', async (ev) => {
     ev.preventDefault();
     Object.assign(APP.perfil, leerPerfil(ev.target));
+    if (firmaPendiente) APP.perfil.firma = firmaPendiente;
     await DB.guardarKV('perfil', APP.perfil);
-    toast('Datos guardados. Se usarán en las próximas evaluaciones.', 'ok');
+    toast('Datos guardados. Se usarán en sus evaluaciones sin enviar.', 'ok');
     cerrarMenu();
+    // Si estaba en una ficha (vino desde la sección 16), se refresca con los datos nuevos.
+    if (APP.actual) { await aplicarPerfil(APP.actual.id, APP.actual.datos); irAPaso(APP.actual.paso); }
   });
   $('#menu-salir').addEventListener('click', async () => {
     const pendientes = APP.cola.length + APP.borradores.length;

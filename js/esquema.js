@@ -20,7 +20,7 @@
 var Esquema = (function () {
   'use strict';
 
-  var VERSION = '2026-09-18.1';
+  var VERSION = '2026-09-18.2';
 
   // ---------------------------------------------------------------- LISTAS
   // [código, etiqueta, (filtro)]. El código es lo que viaja y se guarda en
@@ -169,24 +169,22 @@ var Esquema = (function () {
     }
     return c;
   }
-  // Foto opcional del elemento, que aparece al marcar M o S.
-  function fotoDano(fila) {
-    return {
-      id: 'foto_' + fila[0], etiqueta: 'Foto del daño — ' + fila[1], tipo: 'fotos', max: 3,
-      compacto: true, si: { campo: 'dano_' + fila[0], es: ['m', 's'] }
-    };
-  }
-
   var SI_SISMO = { campo: 'tipo_amenaza', es: 'sismo' };
   var SI_PREVIA = { campo: 'eval_previa', es: 'si' };
 
   // ---------------------------------------------------------------- SECCIONES
   // Tipos: texto, largo, entero, decimal, telefono, fechahora, fecha,
   //        una (una opción), varias (varias opciones), nlms, gps, fotos,
-  //        croquis, sistema (lo pone la app o el servidor, no se escribe).
+  //        firma, sistema (lo pone la app o el servidor, no se escribe).
   // req: obligatorio (solo cuando está visible). si: condición para mostrarlo.
   // enApp:false -> no se pide en campo; lo llena la DIGER en la hoja.
   // perfil: se llena solo con los datos del evaluador guardados en el celular.
+  // Sección con soloLectura: se muestra pero no se edita en la ficha.
+  //
+  // Ajustes pedidos por la DIGER el 2026-09-18: amenaza por defecto Sismo;
+  // ID Zona e ID Grupo no se llenan en campo; sin croquis ni fotos por
+  // elemento, solo 1 o 2 fotos de fachada; la sección 16 sale del perfil
+  // (sin ID evaluador) y la firma se dibuja una vez al ingresar.
   var SECCIONES = [
     { id: 's1', n: '1', titulo: 'Identificación de la evaluación', campos: [
       { id: 'num_formulario', etiqueta: 'No. del formulario', tipo: 'sistema', nota: 'Lo asigna el servidor al recibirla' },
@@ -194,8 +192,8 @@ var Esquema = (function () {
       { id: 'tipo_inspeccion', etiqueta: 'Tipo de inspección', tipo: 'una', lista: 'tipo_inspeccion', req: true },
       { id: 'tipo_amenaza', etiqueta: 'Tipo de amenaza', tipo: 'una', lista: 'tipo_amenaza', req: true },
       { id: 'tipo_amenaza_otro', etiqueta: '¿Cuál amenaza?', tipo: 'texto', req: true, si: { campo: 'tipo_amenaza', es: 'otro' } },
-      { id: 'id_zona', etiqueta: 'ID Zona', tipo: 'texto' },
-      { id: 'id_grupo', etiqueta: 'ID Grupo', tipo: 'texto' },
+      { id: 'id_zona', etiqueta: 'ID Zona', tipo: 'texto', enApp: false },
+      { id: 'id_grupo', etiqueta: 'ID Grupo', tipo: 'texto', enApp: false },
       { id: 'persona_contacto', etiqueta: 'Persona de contacto', tipo: 'texto' },
       { id: 'num_contacto', etiqueta: 'Núm. de contacto', tipo: 'telefono' }
     ] },
@@ -252,11 +250,9 @@ var Esquema = (function () {
     ] },
     { id: 's9', n: '9', titulo: 'Peligro por daño en elementos estructurales', ayuda: 'N/L: ninguno o leve · M: moderado · S: severo', campos: [] },
     { id: 's10', n: '10', titulo: 'Peligro por daño en elementos no estructurales', ayuda: 'N/L: ninguno o leve · M: moderado · S: severo', campos: [] },
-    { id: 's11', n: '11', titulo: 'Esquema y registro fotográfico', campos: [
-      { id: 'croquis_planta', etiqueta: 'Esquema en PLANTA', tipo: 'croquis' },
-      { id: 'croquis_elevacion', etiqueta: 'Esquema en ELEVACIÓN', tipo: 'croquis' },
-      { id: 'fotos_generales', etiqueta: 'Fotos de la edificación (fachada y lo más relevante)', tipo: 'fotos', max: 6, min: 1, req: true },
-      { id: 'fotos_descripcion', etiqueta: 'Descripción de las fotos', tipo: 'largo' }
+    { id: 's11', n: '11', titulo: 'Fotos de la fachada', campos: [
+      { id: 'fotos_generales', etiqueta: 'Fotos de la fachada (mínimo 1, máximo 2)', tipo: 'fotos', max: 2, min: 1, req: true },
+      { id: 'fotos_descripcion', etiqueta: 'Descripción de las fotos', tipo: 'largo', enApp: false }
     ] },
     { id: 's12', n: '12', titulo: 'Clasificación de habitabilidad y del daño', sugerencia: true, campos: [
       { id: 'clasif_habitabilidad', etiqueta: 'Clasificación de habitabilidad', tipo: 'una', lista: 'habitabilidad', req: true },
@@ -281,14 +277,15 @@ var Esquema = (function () {
     { id: 's15', n: '15', titulo: 'Comentarios finales', campos: [
       { id: 'comentarios_finales', etiqueta: 'Comentarios finales', tipo: 'largo' }
     ] },
-    { id: 's16', n: '16', titulo: 'Información del evaluador', campos: [
+    { id: 's16', n: '16', titulo: 'Información del evaluador', soloLectura: true, campos: [
       { id: 'eval_nombre', etiqueta: 'Nombre', tipo: 'texto', req: true, perfil: 'nombre' },
-      { id: 'eval_id', etiqueta: 'ID Evaluador (según registro de evaluadores)', tipo: 'texto', perfil: 'id_evaluador' },
+      { id: 'eval_id', etiqueta: 'ID Evaluador (según registro de evaluadores)', tipo: 'texto', enApp: false },
       { id: 'eval_tipo_doc', etiqueta: 'Tipo de documento', tipo: 'una', lista: 'tipo_documento', req: true, perfil: 'tipo_doc' },
       { id: 'eval_num_doc', etiqueta: 'Número de documento', tipo: 'texto', req: true, perfil: 'num_doc' },
       { id: 'eval_matricula', etiqueta: 'Matrícula / tarjeta profesional', tipo: 'texto', perfil: 'matricula' },
       { id: 'eval_entidad', etiqueta: 'Entidad', tipo: 'texto', req: true, perfil: 'entidad' },
-      { id: 'eval_dependencia', etiqueta: 'Dependencia', tipo: 'texto', perfil: 'dependencia' },
+      { id: 'eval_dependencia', etiqueta: 'Dependencia', tipo: 'texto', req: true, perfil: 'dependencia' },
+      { id: 'eval_firma', etiqueta: 'Firma', tipo: 'firma', req: true, perfil: 'firma' },
       // Funcionario responsable: lo completa la DIGER en la hoja, no el evaluador.
       { id: 'resp_nombre', etiqueta: 'Funcionario responsable', tipo: 'texto', enApp: false },
       { id: 'resp_cc', etiqueta: 'C.C. funcionario responsable', tipo: 'texto', enApp: false },
@@ -298,14 +295,13 @@ var Esquema = (function () {
 
   // Se arman las secciones 9 y 10 a partir de las tablas de colores.
   SECCIONES.forEach(function (s) {
-    if (s.id === 's9') ESTRUCTURALES.forEach(function (f) { s.campos.push(campoDano(f, 9), fotoDano(f)); });
+    if (s.id === 's9') ESTRUCTURALES.forEach(function (f) { s.campos.push(campoDano(f, 9)); });
     if (s.id === 's10') {
-      NO_ESTRUCTURALES.forEach(function (f) { s.campos.push(campoDano(f, 10), fotoDano(f)); });
+      NO_ESTRUCTURALES.forEach(function (f) { s.campos.push(campoDano(f, 10)); });
       // "Otros" no tiene color en el papel (casillas blancas): no pesa en la sugerencia.
       s.campos.push(
         { id: 'dano_otros_ne', etiqueta: 'Otros', tipo: 'nlms', lista: 'nlms', grupoDano: 10 },
-        { id: 'dano_otros_ne_desc', etiqueta: 'Otros — ¿cuál?', tipo: 'texto', req: true, si: { campo: 'dano_otros_ne', es: ['m', 's'] } },
-        { id: 'foto_otros_ne', etiqueta: 'Foto del daño — Otros', tipo: 'fotos', max: 3, compacto: true, si: { campo: 'dano_otros_ne', es: ['m', 's'] } }
+        { id: 'dano_otros_ne_desc', etiqueta: 'Otros — ¿cuál?', tipo: 'texto', req: true, si: { campo: 'dano_otros_ne', es: ['m', 's'] } }
       );
     }
   });

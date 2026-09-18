@@ -8,15 +8,12 @@ const PASOS = Esquema.SECCIONES.map((s) => s.id).concat(['revisar']);
 
 // ---------------------------------------------------------------- ABRIR / CERRAR
 function datosIniciales(solicitud) {
-  const p = APP.perfil || {};
   const d = {
     fecha_hora_inspeccion: ahoraLocal(),
+    tipo_amenaza: 'sismo',          // pedido de la DIGER: casi todas son por sismo; se puede cambiar
     departamento: 'risaralda',
     municipio: 'pereira',
-    zona: 'urbano',
-    eval_nombre: p.nombre || '', eval_id: p.id_evaluador || '', eval_tipo_doc: p.tipo_doc || 'cc',
-    eval_num_doc: p.num_doc || '', eval_matricula: p.matricula || '', eval_entidad: p.entidad || CONFIG.ENTIDAD,
-    eval_dependencia: p.dependencia || ''
+    zona: 'urbano'
   };
   if (solicitud) {
     d.id_solicitud = solicitud.id_solicitud;
@@ -30,6 +27,24 @@ function datosIniciales(solicitud) {
   return d;
 }
 
+/**
+ * Sección 16: sale SIEMPRE del perfil del celular (lo que el ingeniero puso
+ * al ingresar), también en borradores viejos, para que un cambio en "Mis
+ * datos" o en la firma se vea en todo lo que aún no se ha enviado.
+ */
+async function aplicarPerfil(idEval, d) {
+  const p = APP.perfil || {};
+  d.eval_nombre = p.nombre || '';
+  d.eval_tipo_doc = p.tipo_doc || 'cc';
+  d.eval_num_doc = p.num_doc || '';
+  d.eval_matricula = p.matricula || '';
+  d.eval_entidad = CONFIG.ENTIDAD_FICHA;
+  d.eval_dependencia = CONFIG.DEPENDENCIA;
+  delete d.eval_id;
+  d.eval_firma = await ponerFirmaEnEvaluacion(idEval, p.firma);
+  return d;
+}
+
 async function abrirEvaluacion(opciones) {
   let registro;
   if (opciones.borrador) {
@@ -37,6 +52,8 @@ async function abrirEvaluacion(opciones) {
   } else {
     registro = { id: nuevoId(), datos: datosIniciales(opciones.solicitud), solicitud: opciones.solicitud || null, creado: new Date().toISOString() };
   }
+  // Antes de la "foto" de abajo: así aplicar el perfil no cuenta como un cambio del ingeniero.
+  await aplicarPerfil(registro.id, registro.datos);
   APP.actual = {
     id: registro.id,
     datos: registro.datos,
@@ -199,6 +216,7 @@ function htmlSeccion(sid) {
   }
   if (sid === 's1' && APP.actual.solicitud) h += htmlSolicitud(APP.actual.solicitud);
   const visibles = s.campos.filter((c) => Esquema.visible(c, d));
+  if (s.soloLectura) return h + htmlSoloLectura(visibles);
   const esDano = visibles.some((c) => c.tipo === 'nlms');
   h += '<div class="campos' + (esDano ? ' campos-dano' : '') + '">' + (esDano ? gruposDano(visibles) : visibles.map(htmlCampo).join('')) + '</div>';
   return h;
@@ -216,6 +234,20 @@ function gruposDano(campos) {
     grupos[grupos.length - 1].push(c);
   });
   return grupos.map((g) => '<div class="grupo-dano">' + g.map(htmlCampo).join('') + '</div>').join('');
+}
+
+/** Sección 16: solo se ve. Se cambia desde "Mis datos" (menú). */
+function htmlSoloLectura(campos) {
+  const d = APP.actual.datos;
+  const filas = campos.map((c) => {
+    let v;
+    if (c.tipo === 'firma') v = '<div class="firma-muestra" data-firma-evaluacion></div>';
+    else v = Esquema.vacio(d[c.id]) ? '<span class="error">Falta</span>' : esc(c.lista ? Esquema.etiquetaDe(c.lista, d[c.id]) : d[c.id]);
+    return '<div class="dato" data-campo="' + c.id + '"><span class="dato-et">' + esc(c.etiqueta) + '</span><span class="dato-v">' + v + '</span></div>';
+  }).join('');
+  return '<p class="aviso-suave">' + icono('info') + 'Estos datos salen de lo que usted registró al ingresar.</p>' +
+    '<div class="tarjeta solo-lectura">' + filas + '</div>' +
+    '<button type="button" class="btn-secundario" data-ir-menu>' + icono('lapiz') + 'Cambiar mis datos o mi firma</button>';
 }
 
 function htmlSolicitud(s) {
@@ -306,12 +338,6 @@ function htmlCampo(c) {
         '<label class="btn-secundario btn-chico">' + icono('camara') + 'Cámara<input type="file" accept="image/*" capture="environment" data-subir="' + c.id + '" hidden></label>' +
         '<label class="btn-secundario btn-chico">' + icono('galeria') + 'Galería<input type="file" accept="image/*" multiple data-subir="' + c.id + '" hidden></label>' +
         '<span class="c-nota">Máx. ' + c.max + '</span></div>', c.compacto ? ' compacto' : '');
-    case 'croquis':
-      return envoltura(cabeceraCampo(c) + '<div class="croquis-vista" data-croquis-vista="' + c.id + '"></div>' +
-        '<div class="fotos-botones"><button type="button" class="btn-secundario btn-chico" data-croquis="' + c.id + '">' + icono('lapiz') +
-        (Array.isArray(v) && v.length ? 'Volver a dibujar' : 'Dibujar') + '</button>' +
-        (Array.isArray(v) && v.length ? '<button type="button" class="btn-texto btn-chico" data-quitar-croquis="' + c.id + '">Quitar</button>' : '') +
-        '</div>');
   }
   return '';
 }
@@ -405,20 +431,15 @@ function enlazarSeccion(raiz) {
     finally { cargando(false); inp.value = ''; }
   }));
 
-  $$('[data-croquis-vista]', raiz).forEach((cont) => pintarCroquisVista(cont.dataset.croquisVista, cont));
-  $$('[data-croquis]', raiz).forEach((b) => b.addEventListener('click', () => {
-    const c = Esquema.CAMPOS[b.dataset.croquis];
-    abrirCroquis(c.id, c.etiqueta, async (dataUrl) => {
-      d[c.id] = await guardarCroquis(APP.actual.id, c.id, dataUrl);
-      cambio(true);
+  const muestra = $('[data-firma-evaluacion]', raiz);
+  if (muestra) {
+    const clave = (d.eval_firma || [])[0];
+    (clave ? DB.leer('fotos', clave) : Promise.resolve(null)).then((f) => {
+      muestra.innerHTML = f ? '<img src="' + f.dataUrl + '" alt="Firma">' : '<span class="error">Falta la firma</span>';
     });
-  }));
-  $$('[data-quitar-croquis]', raiz).forEach((b) => b.addEventListener('click', async () => {
-    const id = b.dataset.quitarCroquis;
-    for (const k of d[id] || []) await quitarFoto(k);
-    delete d[id];
-    cambio(true);
-  }));
+  }
+  const irMenu = $('[data-ir-menu]', raiz);
+  if (irMenu) irMenu.addEventListener('click', abrirMenu);
 
   const btnGps = $('#btn-gps', raiz);
   if (btnGps) enlazarGps(raiz);
@@ -468,12 +489,6 @@ async function pintarMiniaturas(campo, cont) {
   }));
 }
 
-async function pintarCroquisVista(campo, cont) {
-  const claves = APP.actual.datos[campo] || [];
-  const f = claves[0] ? await DB.leer('fotos', claves[0]) : null;
-  cont.innerHTML = f ? '<img src="' + f.dataUrl + '" alt="Croquis">' : '<span class="c-nota">Sin dibujo. Es opcional, pero ayuda mucho a ubicar los daños.</span>';
-}
-
 function enlazarGps(raiz) {
   const d = APP.actual.datos;
   const btn = $('#btn-gps', raiz);
@@ -514,11 +529,8 @@ const LOGOS_FICHA = { sngrd: 'img/logo-sngrd.png', miyamoto: 'img/logo-usaid-miy
 async function abrirVistaPrevia(idEval, datos, aviso) {
   cargando(true, 'Armando la ficha…');
   try {
-    const { fotos, croquis } = await fotosParaFicha(idEval, datos);
-    const html = Ficha.html(Esquema.limpiarOcultos(datos), {
-      logos: LOGOS_FICHA, fotos, croquis, aviso,
-      firmaTexto: datos.eval_nombre ? 'Registrado en la app por ' + datos.eval_nombre : ''
-    });
+    const { fotos, firma } = await fotosParaFicha(idEval, datos);
+    const html = Ficha.html(Esquema.limpiarOcultos(datos), { logos: LOGOS_FICHA, fotos, firma, aviso });
     const marco = $('#previa-marco');
     marco.srcdoc = html;
     $('#vista-previa').hidden = false;

@@ -266,12 +266,17 @@ var Ficha = (function () {
       tablaDano(d, camposNLMS('s10'), nota) + '</div>';
   }
 
+  /**
+   * Sección 11. La DIGER no dibuja esquemas en campo (decisión del 18/09):
+   * los dos recuadros del papel llevan las 1 o 2 fotos de la fachada.
+   */
   function s11(d, o) {
-    var cr = o.croquis || {};
+    var f = (o.fotos && o.fotos.fotos_generales) || [];
     function hueco(url) { return url ? '<img src="' + url + '" alt="">' : ''; }
-    return '<div class="caja">' + titulo('11. ESQUEMA') +
-      '<table class="t esq"><tr><td class="c esq-t">PLANTA</td><td class="c esq-t">ELEVACIÓN</td></tr>' +
-      '<tr><td class="cuad">' + hueco(cr.croquis_planta) + '</td><td class="cuad">' + hueco(cr.croquis_elevacion) + '</td></tr></table></div>';
+    return '<div class="caja">' + titulo('11. ESQUEMA — REGISTRO FOTOGRÁFICO DE LA FACHADA') +
+      '<table class="t esq"><tr><td class="c esq-t">FOTO 1</td><td class="c esq-t">FOTO 2</td></tr>' +
+      '<tr><td class="cuad">' + hueco(f[0]) + '</td><td class="cuad">' + hueco(f[1]) + '</td></tr></table>' +
+      (d.fotos_descripcion ? '<div class="texto">' + esc(d.fotos_descripcion) + '</div>' : '') + '</div>';
   }
 
   function s12(d) {
@@ -325,7 +330,7 @@ var Ficha = (function () {
       '</td><td class="l">Número de documento:</td><td>' + val(d.eval_num_doc) + '</td></tr>' +
       '<tr><td class="l">Entidad:</td><td>' + val(d.eval_entidad) + '</td><td class="l">Dependencia:</td><td>' + val(d.eval_dependencia) + '</td></tr>' +
       '<tr><td class="l">Matrícula profesional:</td><td>' + val(d.eval_matricula) + '</td><td class="l">Firma:</td><td class="firma">' +
-      (o.firmaTexto ? esc(o.firmaTexto) : '&nbsp;') + '</td></tr>' +
+      (o.firma ? '<img class="img-firma" src="' + o.firma + '" alt="Firma">' : '&nbsp;') + '</td></tr>' +
       '<tr><td colspan="2"></td><td class="l">Firma Funcionario Responsable:</td><td>' + val(d.resp_nombre) + '</td></tr>' +
       '<tr><td colspan="2"></td><td class="l">C.C. No.:</td><td>' + val(d.resp_cc) + '</td></tr>' +
       '<tr><td colspan="2"></td><td class="l">Entidad:</td><td>' + val(d.resp_entidad) + '</td></tr>' +
@@ -333,43 +338,28 @@ var Ficha = (function () {
   }
 
   // ---------------------------------------------------------------- ANEXO
+  /**
+   * Hoja anexa: solo cuando el evaluador clasificó MENOS grave que la
+   * sugerencia del sistema, para dejar constancia de su justificación. En los
+   * demás casos la ficha queda en las 2 páginas del formulario oficial.
+   */
   function anexo(d, o, consecutivo) {
+    if (!E.menosGraveQueSugerencia(d) && !d.justificacion_clasif) return '';
     var L = o.logos || {};
-    var fotos = o.fotos || {};
     var sug = E.sugerencia(d);
     var nombres = { verde: 'HABITABLE (Verde)', amarillo: 'USO RESTRINGIDO (Amarillo)', rojo: 'NO HABITABLE (Rojo)' };
     var bloqueSug = sug.color
-      ? '<b>' + nombres[sug.color] + '</b>' + (sug.motivos.length ? ' — por: ' + sug.motivos.map(function (m) { return esc(m.texto); }).join('; ') : ' — sin casillas de color marcadas.')
+      ? '<b>' + nombres[sug.color] + '</b>' + (sug.motivos.length ? ' — por: ' + sug.motivos.map(function (m) { return esc(m.texto); }).join('; ') : '')
       : 'Sin sugerencia: faltan casillas de las secciones 7 a 10.';
     var elegido = d.clasif_habitabilidad ? E.etiquetaDe('habitabilidad', d.clasif_habitabilidad) : '(sin clasificar)';
-
-    // Fotos en el orden del formulario: primero las generales, luego las de cada elemento.
-    var lista = [];
-    E.SECCIONES.forEach(function (s) {
-      s.campos.forEach(function (c) {
-        if (c.tipo !== 'fotos') return;
-        (fotos[c.id] || []).forEach(function (url, i, arr) {
-          lista.push({ url: url, pie: c.etiqueta.replace(/^Foto del daño — /, 'Daño: ') + (arr.length > 1 ? ' (' + (i + 1) + ')' : '') });
-        });
-      });
-    });
-    var celdas = '';
-    for (var i = 0; i < lista.length; i += 2) {
-      celdas += '<tr>' + [lista[i], lista[i + 1]].map(function (f) {
-        return f ? '<td class="foto"><img src="' + f.url + '" alt=""><div class="pie-foto">' + esc(f.pie) + '</div></td>' : '<td></td>';
-      }).join('') + '</tr>';
-    }
-
     return '<div class="pagina salto">' +
       '<table class="enc"><tr><td class="enc-izq">' + (L.entidad ? '<img src="' + L.entidad + '" alt="">' : '') +
-      '</td><td class="enc-cen">ANEXO — REGISTRO FOTOGRÁFICO<br><span class="enc-sub">Formulario No. ' + esc(consecutivo) + '</span></td><td class="enc-der"></td></tr></table>' +
+      '</td><td class="enc-cen">ANEXO — JUSTIFICACIÓN DE LA CLASIFICACIÓN<br><span class="enc-sub">Formulario No. ' + esc(consecutivo) + '</span></td><td class="enc-der"></td></tr></table>' +
       '<div class="caja">' + titulo('SUGERENCIA DEL SISTEMA Y CLASIFICACIÓN DEL EVALUADOR') +
       '<div class="texto">Sugerencia automática según los colores del formulario (secciones 7 a 10): ' + bloqueSug +
       '<br>Clasificación del evaluador: <b>' + esc(elegido) + '</b>' +
       (d.justificacion_clasif ? '<br>Justificación: ' + esc(d.justificacion_clasif) : '') +
       '<br><span class="nota">La sugerencia es una ayuda: la clasificación la decide el evaluador.</span></div></div>' +
-      (lista.length ? '<div class="caja">' + titulo('FOTOGRAFÍAS') + '<table class="t fotos">' + celdas + '</table>' +
-        (d.fotos_descripcion ? '<div class="texto">' + esc(d.fotos_descripcion) + '</div>' : '') + '</div>' : '') +
       '</div>';
   }
 
@@ -413,7 +403,7 @@ var Ficha = (function () {
       'background-image:linear-gradient(#ddd 1px,transparent 1px),linear-gradient(90deg,#ddd 1px,transparent 1px);background-size:5mm 5mm}' +
     '.cuad img{max-width:100%;max-height:60mm;background:#fff}' +
     '.texto{min-height:12mm;padding:2px;white-space:pre-wrap}' +
-    '.firma{font-style:italic}' +
+    '.firma{font-style:italic}.img-firma{max-height:16mm;max-width:60mm;display:block}' +
     '.fotos td.foto{width:50%;text-align:center;vertical-align:top;padding:3px}' +
     '.fotos img{max-width:100%;max-height:85mm}' +
     '.pie-foto{font-size:8pt;margin-top:2px}' +
@@ -432,7 +422,7 @@ var Ficha = (function () {
   /**
    * @param {Object} d  datos con códigos
    * @param {Object} o  { logos:{sngrd,miyamoto,pie,entidad}, fotos:{campo:[url]},
-   *                      croquis:{croquis_planta:url,...}, aviso:'texto', firmaTexto,
+   *                      firma: url de la imagen de la firma, aviso:'texto',
    *                      cuerpoSolo:bool (sin <html>, para incrustar) }
    */
   function html(d, o) {

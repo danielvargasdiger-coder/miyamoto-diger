@@ -1,10 +1,10 @@
 /* =========================================================================
-   FOTOS Y CROQUIS
+   FOTOS Y FIRMA
 
    Las fotos NO van dentro de los datos de la ficha (pesan mucho y cada
    autoguardado las reescribiría). Van en su propio almacén 'fotos', y la
    ficha solo guarda las claves: datos.foto_columnas = ['MIY-...|foto_columnas|1'].
-   El croquis de la sección 11 es una foto más (PNG), así sube por el mismo
+   La firma del evaluador es una foto más (PNG), así sube por el mismo
    camino y el servidor no necesita nada especial.
    ========================================================================= */
 'use strict';
@@ -48,133 +48,119 @@ async function agregarFotos(idEval, campo, archivos, max) {
 
 async function quitarFoto(clave) { await DB.borrar('fotos', clave); }
 
-/** { campo: [dataUrl] } para la vista previa de la ficha. */
+/** Fotos y firma para la vista previa de la ficha: { fotos: {campo:[dataUrl]}, firma }. */
 async function fotosParaFicha(idEval, datos) {
   const todas = await DB.fotosDe(idEval);
   const porClave = {};
   todas.forEach((f) => { porClave[f.clave] = f.dataUrl; });
-  const fotos = {}, croquis = {};
+  const fotos = {};
+  let firma = '';
   Object.keys(Esquema.CAMPOS).forEach((id) => {
     const c = Esquema.CAMPOS[id];
     const claves = datos[id];
     if (!Array.isArray(claves)) return;
     const urls = claves.map((k) => porClave[k]).filter(Boolean);
     if (c.tipo === 'fotos') fotos[id] = urls;
-    if (c.tipo === 'croquis' && urls[0]) croquis[id] = urls[0];
+    if (c.tipo === 'firma' && urls[0]) firma = urls[0];
   });
-  return { fotos, croquis };
+  return { fotos, firma };
 }
 
-// ---------------------------------------------------------------- CROQUIS
 /**
- * Editor de croquis a pantalla completa, sobre cuadrícula como el papel.
- * Lápiz, borrador, deshacer y limpiar. Se guarda como PNG.
+ * La firma del perfil se copia a cada evaluación como un archivo más
+ * (firma_1.png), así sube por el mismo camino que las fotos y la ficha del
+ * servidor la tiene aunque el ingeniero cambie su firma después.
  */
-const CROQUIS = { trazos: [], actual: null, modo: 'lapiz', campo: null, lienzo: null, ctx: null, alListo: null };
+async function ponerFirmaEnEvaluacion(idEval, firmaDataUrl) {
+  if (!firmaDataUrl) return [];
+  const clave = idEval + '|eval_firma|1';
+  await DB.guardar('fotos', { clave, idEval, campo: 'eval_firma', nombre: 'firma_1.png', dataUrl: firmaDataUrl, tipo: 'image/png' });
+  return [clave];
+}
 
-function abrirCroquis(campo, etiqueta, alListo) {
-  CROQUIS.campo = campo; CROQUIS.alListo = alListo; CROQUIS.trazos = []; CROQUIS.modo = 'lapiz';
-  $('#croquis-titulo').textContent = etiqueta;
-  $('#vista-croquis').hidden = false;
+// ---------------------------------------------------------------- PANEL DE FIRMA
+/**
+ * Panel a pantalla completa para firmar con el dedo. Se usa al ingresar y
+ * desde "Mis datos"; la firma queda en el perfil del celular. Los trazos se
+ * guardan en 0..1 para redibujarse bien si el celular gira.
+ */
+const FIRMA = { trazos: [], actual: null, lienzo: null, ctx: null, alListo: null };
+const ANCHO_FIRMA = 600;
+
+function abrirFirma(alListo) {
+  FIRMA.alListo = alListo; FIRMA.trazos = [];
+  $('#vista-firma').hidden = false;
   document.body.classList.add('sin-scroll');
-  const lienzo = $('#croquis-lienzo');
-  CROQUIS.lienzo = lienzo;
-  requestAnimationFrame(() => { ajustarLienzo(); marcarModo(); });
+  FIRMA.lienzo = $('#firma-lienzo');
+  requestAnimationFrame(ajustarLienzoFirma);
 }
 
-function ajustarLienzo() {
-  const l = CROQUIS.lienzo, caja = l.parentElement.getBoundingClientRect();
+function ajustarLienzoFirma() {
+  const l = FIRMA.lienzo, caja = l.parentElement.getBoundingClientRect();
+  // Proporción fija 5:2, como el renglón de firma del formulario.
+  const ancho = Math.min(caja.width, 900), alto = Math.min(caja.height, ancho * 0.4);
   const ratio = window.devicePixelRatio || 1;
-  l.width = Math.round(caja.width * ratio); l.height = Math.round(caja.height * ratio);
-  l.style.width = caja.width + 'px'; l.style.height = caja.height + 'px';
-  CROQUIS.ctx = l.getContext('2d');
-  redibujarCroquis();
+  l.width = Math.round(ancho * ratio); l.height = Math.round(alto * ratio);
+  l.style.width = ancho + 'px'; l.style.height = alto + 'px';
+  FIRMA.ctx = l.getContext('2d');
+  redibujarFirma();
 }
 
-function cuadricula(ctx, w, h, paso) {
-  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
-  ctx.strokeStyle = '#dde3ea'; ctx.lineWidth = 1;
-  ctx.beginPath();
-  for (let x = 0; x <= w; x += paso) { ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, h); }
-  for (let y = 0; y <= h; y += paso) { ctx.moveTo(0, y + 0.5); ctx.lineTo(w, y + 0.5); }
-  ctx.stroke();
-}
-
-/** Los trazos se guardan en coordenadas 0..1: así se redibujan a cualquier tamaño. */
 function pintarTrazos(ctx, w, h, trazos) {
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = '#0a1f44';
+  ctx.lineWidth = Math.max(2, w / 180);
   trazos.forEach((t) => {
-    ctx.strokeStyle = t.borrar ? '#fff' : '#10233a';
-    ctx.lineWidth = (t.borrar ? 22 : 3.2) * (w / 700);
     ctx.beginPath();
-    t.p.forEach((pt, i) => { const x = pt[0] * w, y = pt[1] * h; if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
-    if (t.p.length === 1) ctx.lineTo(t.p[0][0] * w + 0.1, t.p[0][1] * h);
+    t.forEach((pt, i) => { const x = pt[0] * w, y = pt[1] * h; if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
+    if (t.length === 1) ctx.lineTo(t[0][0] * w + 0.1, t[0][1] * h);
     ctx.stroke();
   });
 }
 
-function redibujarCroquis() {
-  const { ctx, lienzo } = CROQUIS;
-  cuadricula(ctx, lienzo.width, lienzo.height, Math.round(lienzo.width / 28));
-  pintarTrazos(ctx, lienzo.width, lienzo.height, CROQUIS.trazos);
-  // La cuadrícula se vuelve a pintar debajo del borrador: el blanco del borrador la tapa.
+function redibujarFirma() {
+  const { ctx, lienzo } = FIRMA;
+  pintarTrazos(ctx, lienzo.width, lienzo.height, FIRMA.trazos);
+  // Renglón guía, solo en pantalla (no sale en la firma guardada).
+  ctx.strokeStyle = '#c3ccd6'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(lienzo.width * 0.06, lienzo.height * 0.78); ctx.lineTo(lienzo.width * 0.94, lienzo.height * 0.78); ctx.stroke();
 }
 
 function puntoDe(ev) {
-  const r = CROQUIS.lienzo.getBoundingClientRect();
+  const r = FIRMA.lienzo.getBoundingClientRect();
   return [Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height))];
 }
 
-function marcarModo() {
-  $$('#vista-croquis [data-modo]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.modo === CROQUIS.modo));
-}
-
-function iniciarEventosCroquis() {
-  const l = $('#croquis-lienzo');
+function iniciarEventosFirma() {
+  const l = $('#firma-lienzo');
   l.addEventListener('pointerdown', (ev) => {
     ev.preventDefault(); l.setPointerCapture(ev.pointerId);
-    CROQUIS.actual = { borrar: CROQUIS.modo === 'borrador', p: [puntoDe(ev)] };
-    CROQUIS.trazos.push(CROQUIS.actual); redibujarCroquis();
+    FIRMA.actual = [puntoDe(ev)]; FIRMA.trazos.push(FIRMA.actual); redibujarFirma();
   });
-  l.addEventListener('pointermove', (ev) => {
-    if (!CROQUIS.actual) return;
-    CROQUIS.actual.p.push(puntoDe(ev)); redibujarCroquis();
-  });
-  const soltar = () => { CROQUIS.actual = null; };
+  l.addEventListener('pointermove', (ev) => { if (FIRMA.actual) { FIRMA.actual.push(puntoDe(ev)); redibujarFirma(); } });
+  const soltar = () => { FIRMA.actual = null; };
   l.addEventListener('pointerup', soltar); l.addEventListener('pointercancel', soltar);
-
-  $$('#vista-croquis [data-modo]').forEach((b) => b.addEventListener('click', () => { CROQUIS.modo = b.dataset.modo; marcarModo(); }));
-  $('#croquis-deshacer').addEventListener('click', () => { CROQUIS.trazos.pop(); redibujarCroquis(); });
-  $('#croquis-limpiar').addEventListener('click', () => {
-    if (CROQUIS.trazos.length && confirm('¿Borrar todo el dibujo?')) { CROQUIS.trazos = []; redibujarCroquis(); }
-  });
-  $('#croquis-cancelar').addEventListener('click', cerrarCroquis);
-  $('#croquis-guardar').addEventListener('click', () => {
-    if (!CROQUIS.trazos.length) { toast('No hay nada dibujado'); return; }
-    // Se exporta a un tamaño fijo, sin depender de la pantalla del celular.
-    const w = CONFIG.ANCHO_CROQUIS, h = Math.round(w * CROQUIS.lienzo.height / CROQUIS.lienzo.width);
+  $('#firma-deshacer').addEventListener('click', () => { FIRMA.trazos.pop(); redibujarFirma(); });
+  $('#firma-limpiar').addEventListener('click', () => { FIRMA.trazos = []; redibujarFirma(); });
+  $('#firma-cancelar').addEventListener('click', cerrarFirma);
+  $('#firma-guardar').addEventListener('click', () => {
+    const puntos = FIRMA.trazos.reduce((n, t) => n + t.length, 0);
+    if (puntos < 8) { toast('Firme dentro del recuadro'); return; }
+    // Tamaño fijo, sin depender de la pantalla del celular.
+    const w = ANCHO_FIRMA, h = Math.round(w * FIRMA.lienzo.height / FIRMA.lienzo.width);
     const c = document.createElement('canvas'); c.width = w; c.height = h;
-    const ctx = c.getContext('2d');
-    cuadricula(ctx, w, h, Math.round(w / 28));
-    pintarTrazos(ctx, w, h, CROQUIS.trazos);
+    pintarTrazos(c.getContext('2d'), w, h, FIRMA.trazos);
     const dataUrl = c.toDataURL('image/png');
-    const listo = CROQUIS.alListo;
-    cerrarCroquis();
+    const listo = FIRMA.alListo;
+    cerrarFirma();
     if (listo) listo(dataUrl);
   });
-  window.addEventListener('resize', () => { if (!$('#vista-croquis').hidden) ajustarLienzo(); });
+  window.addEventListener('resize', () => { if (!$('#vista-firma').hidden) ajustarLienzoFirma(); });
 }
 
-function cerrarCroquis() {
-  $('#vista-croquis').hidden = true;
-  document.body.classList.remove('sin-scroll');
-}
-
-async function guardarCroquis(idEval, campo, dataUrl) {
-  // Un croquis por campo: se reemplaza con la misma clave y un nombre nuevo,
-  // para que el servidor lo reciba como archivo distinto si ya había subido el viejo.
-  const version = Date.now().toString(36);
-  const clave = idEval + '|' + campo + '|1';
-  await DB.guardar('fotos', { clave, idEval, campo, nombre: campo + '_' + version + '.png', dataUrl, tipo: 'image/png' });
-  return [clave];
+function cerrarFirma() {
+  $('#vista-firma').hidden = true;
+  // El menú y la ficha también bloquean el scroll: solo se libera si no hay otra pantalla abierta.
+  if ($('#vista-menu').hidden && $('#vista-ficha').hidden) document.body.classList.remove('sin-scroll');
 }

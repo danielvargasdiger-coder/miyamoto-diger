@@ -330,7 +330,7 @@ var Ficha = (function () {
       '</td><td class="l">Número de documento:</td><td>' + val(d.eval_num_doc) + '</td></tr>' +
       '<tr><td class="l">Entidad:</td><td>' + val(d.eval_entidad) + '</td><td class="l">Dependencia:</td><td>' + val(d.eval_dependencia) + '</td></tr>' +
       '<tr><td class="l">Matrícula profesional:</td><td>' + val(d.eval_matricula) + '</td><td class="l">Firma:</td><td class="firma">' +
-      (o.firma ? '<img class="img-firma" src="' + o.firma + '" alt="Firma">' : '&nbsp;') + '</td></tr>' +
+      (o.firma ? '<img class="img-firma" src="' + o.firma + '" alt="Firma">' : (o.firmaTexto ? esc(o.firmaTexto) : '&nbsp;')) + '</td></tr>' +
       '<tr><td colspan="2"></td><td class="l">Firma Funcionario Responsable:</td><td>' + val(d.resp_nombre) + '</td></tr>' +
       '<tr><td colspan="2"></td><td class="l">C.C. No.:</td><td>' + val(d.resp_cc) + '</td></tr>' +
       '<tr><td colspan="2"></td><td class="l">Entidad:</td><td>' + val(d.resp_entidad) + '</td></tr>' +

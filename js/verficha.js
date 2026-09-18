@@ -20,11 +20,35 @@
     $('#contenido').innerHTML = '<div class="estado error"><b>No se pudo abrir la ficha</b><p>' + Ficha.esc(texto) + '</p></div>';
   }
 
+  /**
+   * Código de acceso guardado en ESTE celular, si el ingeniero ya ingresó a
+   * la app. Con él la ficha sale completa; sin él, la versión pública (sin
+   * teléfono, documento ni firma). Si la base no existe, NO se crea: se
+   * aborta la creación para no dañar la de la app.
+   */
+  function codigoLocal() {
+    return new Promise(function (ok) {
+      try {
+        var req = indexedDB.open('miyamoto-' + CONFIG.ENTORNO);
+        req.onupgradeneeded = function () { req.transaction.abort(); };
+        req.onerror = function () { ok(''); };
+        req.onsuccess = function () {
+          var db = req.result;
+          if (!db.objectStoreNames.contains('kv')) { db.close(); ok(''); return; }
+          var g = db.transaction('kv', 'readonly').objectStore('kv').get('perfil');
+          g.onsuccess = function () { db.close(); ok((g.result && g.result.codigo) || ''); };
+          g.onerror = function () { db.close(); ok(''); };
+        };
+      } catch (e) { ok(''); }
+    });
+  }
+  var codigo = '';
+
   function llamar(accion, carga) {
     return fetch(CONFIG.URL_SERVIDOR_FICHAS, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(Object.assign({ accion: accion, id: id, t: t }, carga || {})),
+      body: JSON.stringify(Object.assign({ accion: accion, id: id, t: t, codigo: codigo }, carga || {})),
       redirect: 'follow'
     }).then(function (r) { return r.text(); }).then(function (texto) {
       var j;
@@ -69,9 +93,11 @@
   if (!id || !t) { mostrarError('El enlace está incompleto.'); return; }
   if (!CONFIG.URL_SERVIDOR_FICHAS) { mostrarError('La app no tiene servidor configurado.'); return; }
 
-  llamar('ficha').then(function (r) {
-    var aviso = r.estado && r.estado !== 'COMPLETA' ? 'Estado del envío: ' + r.estado : '';
-    $('#contenido').innerHTML = Ficha.html(r.datos, { logos: LOGOS, fotos: r.fotos, firma: r.firma, aviso: aviso, cuerpoSolo: true });
+  codigoLocal().then(function (c) { codigo = c; return llamar('ficha'); }).then(function (r) {
+    var avisos = [];
+    if (r.estado && r.estado !== 'COMPLETA') avisos.push('Estado del envío: ' + r.estado);
+    if (!r.completa) avisos.push('Versión pública: se ocultan el teléfono del contacto, los números de documento y la firma. La completa se ve desde la app de la DIGER.');
+    $('#contenido').innerHTML = Ficha.html(r.datos, { logos: LOGOS, fotos: r.fotos, firma: r.firma, firmaTexto: r.firmaTexto, aviso: avisos.join(' · '), cuerpoSolo: true });
     document.title = 'Formulario ' + r.num_formulario + ' · DIGER';
     enlazarBarra(r.num_formulario);
     ajustar();

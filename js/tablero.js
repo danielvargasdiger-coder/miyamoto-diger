@@ -83,7 +83,9 @@ function barras(clave, datos, colorBase) {
   return '<div class="barras">' + datos.map(([valor, n, color]) => {
     const et = etiquetaFiltro(clave, valor);
     return '<button type="button" class="barra-fila' + (activo && activo !== valor ? ' tenue' : '') + '" data-filtro="' + clave + '" data-valor="' + esc(valor) + '"' +
-      ' aria-pressed="' + (activo === valor) + '" title="' + esc((activo === valor ? 'Quitar filtro: ' : 'Filtrar por: ') + et) + '">' +
+      ' aria-pressed="' + (activo === valor) + '" title="' + esc((activo === valor ? 'Quitar filtro: ' : 'Filtrar por: ') + et) + '"' +
+      // En 0 no se deja tocar: el tablero quedaría vacío sin explicación.
+      (!n && activo !== valor ? ' disabled' : '') + '>' +
       '<span class="barra-et">' + esc(et) + '</span>' +
       '<span class="barra-pista"><span class="barra" style="width:' + (n ? Math.max(2, Math.round(100 * n / tope)) : 0) + '%;background:' + (color || colorBase) + '"></span></span>' +
       '<span class="barra-n">' + n + '</span></button>';

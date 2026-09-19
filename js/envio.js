@@ -157,6 +157,7 @@ async function sincronizar(silencioso) {
     await recargarLocales();
     pintarInicio();
     pintarConexion();
+    aplicarVersionSiSePuede();            // una versión nueva que esperaba a que terminara
   }
 }
 

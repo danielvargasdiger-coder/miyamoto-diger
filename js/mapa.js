@@ -82,13 +82,19 @@ function pintarMapa() {
   const todos = puntosDelMapa();
   // Las cuentas se sacan ANTES de filtrar: si no, el botón apagado dice 0
   // y parece que no queda nada por evaluar (pasó en taludes).
-  const cuentas = { todas: todos.length, porEvaluar: todos.filter((p) => p.tipo === 'porEvaluar').length };
-  cuentas.evaluadas = cuentas.todas - cuentas.porEvaluar;
+  // "Por evaluar" cuenta lo mismo que la lista, aunque alguna visita no tenga
+  // ubicación (el celular decía 0 en el mapa y 1 en la lista).
+  const sinUbicacion = solicitudesPendientes().filter((s) => !Esquema.coordenadaValida(s.lat, s.lon)).length;
+  const conPunto = todos.filter((p) => p.tipo === 'porEvaluar').length;
+  const cuentas = { porEvaluar: conPunto + sinUbicacion, evaluadas: todos.length - conPunto };
+  cuentas.todas = cuentas.porEvaluar + cuentas.evaluadas;
   $('#mapa-filtros').innerHTML = FILTROS_MAPA.map(([k, t]) =>
     '<button type="button" class="chip chip-mapa" data-filtro-mapa="' + k + '" aria-checked="' + (MAPA.filtro === k) + '">' +
     t + ' <span class="cuenta">' + cuentas[k] + '</span></button>').join('');
   $('#mapa-leyenda').innerHTML = [['porEvaluar', 'Por evaluar'], ['verde', 'Habitable'], ['amarillo', 'Uso restringido'], ['rojo', 'No habitable']]
-    .map(([c, t]) => '<span><i style="background:' + COLOR_PUNTO[c] + '"></i>' + t + '</span>').join('');
+    .map(([c, t]) => '<span><i style="background:' + COLOR_PUNTO[c] + '"></i>' + t + '</span>').join('') +
+    (sinUbicacion && MAPA.filtro !== 'evaluadas'
+      ? '<span class="mapa-sin-ubicacion">' + sinUbicacion + (sinUbicacion === 1 ? ' visita sin ubicación: está solo en la lista' : ' visitas sin ubicación: están solo en la lista') + '</span>' : '');
 
   const visibles = todos.filter((p) => MAPA.filtro === 'todas' ||
     (MAPA.filtro === 'porEvaluar' ? p.tipo === 'porEvaluar' : p.tipo === 'evaluada'));

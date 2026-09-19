@@ -27,7 +27,7 @@ async function iniciar() {
 
   await cargarListas();
   APP.perfil = await DB.leerKV('perfil');
-  if (!APP.perfil && CONFIG.DEMO_CON_DATOS) APP.perfilAnterior = perfilDeDemostracion();
+  if (!APP.perfil) APP.perfilAnterior = (await DB.leerKV('perfilAnterior')) || (CONFIG.DEMO_CON_DATOS ? perfilDeDemostracion() : null);
   if (!APP.perfil) { mostrarIngreso(); return; }
   entrarApp();
   sincronizar(true);
@@ -58,8 +58,11 @@ async function reiniciarDemostracion() {
 
 // ---------------------------------------------------------------- ACTUALIZACIONES
 /**
- * Igual que taludes: la versión nueva se descarga pero NO se activa hasta
- * que el ingeniero toca "Actualizar". Nunca le cambia la app a mitad de ficha.
+ * La versión nueva se descarga sola. Se activa SOLA si en ese momento nadie
+ * está llenando una evaluación, sincronizando ni escribiendo (18/09: con solo
+ * la barra "Actualizar", quien no la tocaba seguía con la versión vieja sin
+ * saberlo). Si está ocupado, sale la barra y además se activa sola apenas
+ * salga de la evaluación o vuelva a la app. Nunca a mitad de una ficha.
  */
 function registrarSW() {
   if (!('serviceWorker' in navigator)) return;
@@ -84,7 +87,24 @@ function registrarSW() {
   }).catch(() => console.warn('Sin modo fuera de línea (requiere https o localhost).'));
 }
 
+let _versionEsperando = null;
+
+function sePuedeActualizarSolo() {
+  const foco = document.activeElement;
+  const escribiendo = !!foco && /^(INPUT|TEXTAREA|SELECT)$/.test(foco.tagName);
+  return !APP.actual && !APP.sincronizando && !escribiendo && $('#vista-previa').hidden && $('#vista-firma').hidden;
+}
+
+/** Si hay una versión nueva esperando y el momento es bueno, se activa (la página se recarga sola). */
+function aplicarVersionSiSePuede() {
+  if (_versionEsperando && sePuedeActualizarSolo()) { _versionEsperando.postMessage('SALTAR_ESPERA'); _versionEsperando = null; }
+}
+
+document.addEventListener('visibilitychange', () => { if (!document.hidden) aplicarVersionSiSePuede(); });
+
 function avisarVersionNueva(worker) {
+  _versionEsperando = worker;
+  if (sePuedeActualizarSolo()) { aplicarVersionSiSePuede(); return; }
   const barra = $('#aviso-version');
   barra.hidden = false;
   $('#btn-actualizar').onclick = async () => {

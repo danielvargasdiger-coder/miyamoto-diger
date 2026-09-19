@@ -111,6 +111,7 @@ async function cerrarVistaFicha() {
   APP.actual = null;
   await recargarLocales();
   pintarInicio();
+  aplicarVersionSiSePuede();              // si llegó una versión nueva mientras llenaba
 }
 
 // ---------------------------------------------------------------- BORRADORES

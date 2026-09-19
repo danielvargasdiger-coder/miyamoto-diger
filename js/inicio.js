@@ -386,11 +386,24 @@ async function ingresar(ev) {
  */
 function pedirCodigoDeNuevo() {
   if (!APP.perfil) return;
-  APP.perfilAnterior = APP.perfil;
+  recordarPerfil(APP.perfil);
   APP.perfil = null;
   DB.guardarKV('perfil', null);
   toast('El código de acceso ya no es válido. Pídale el nuevo a la DIGER.', 'error');
   mostrarIngreso();
+}
+
+/**
+ * Nombre, documento y firma quedan guardados (sin el código) para el
+ * próximo ingreso. Antes solo quedaban en memoria: si el código cambiaba y
+ * se cerraba la app, el ingeniero tenía que llenar todo y firmar otra vez.
+ */
+function recordarPerfil(p) {
+  if (!p) return;
+  const sinCodigo = Object.assign({}, p);
+  delete sinCodigo.codigo;
+  APP.perfilAnterior = sinCodigo;
+  DB.guardarKV('perfilAnterior', sinCodigo).catch(() => {});
 }
 
 function abrirMenu() {
@@ -454,7 +467,7 @@ function enlazarMenu() {
       pendientes ? 'Tiene ' + pendientes + ' evaluaciones sin enviar. No se borran: vuelven a aparecer al ingresar de nuevo.' : 'Tendrá que escribir el código otra vez.',
       [['si', 'Salir', 'peligro'], ['no', 'Cancelar', '']]);
     if (r !== 'si') return;
-    APP.perfilAnterior = APP.perfil;
+    recordarPerfil(APP.perfil);
     APP.perfil = null;
     await DB.guardarKV('perfil', null);
     cerrarMenu();

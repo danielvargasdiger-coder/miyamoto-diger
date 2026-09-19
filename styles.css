@@ -262,6 +262,15 @@ body.modo-demo, body.entorno-pruebas { --alto-cinta: 22px; padding-top: var(--al
 .req { color: var(--error); }
 .c-nota { font-weight: 400; font-size: .82rem; color: var(--texto-suave); }
 .c-sistema { color: var(--texto-suave); font-style: italic; }
+.c-fijo { display: flex; align-items: center; gap: 8px; font-style: normal; font-weight: 600; color: var(--texto);
+  background: var(--fondo); border-radius: 8px; padding: 10px 12px; min-height: 44px; }
+.c-fijo .ico { width: 18px; height: 18px; color: var(--texto-suave); flex: none; }
+.ejemplo-masa { margin: 8px 0 12px; border: 1px solid var(--borde); border-radius: var(--radio); overflow: hidden; background: var(--fondo); }
+.ejemplo-masa img { display: block; width: 100%; max-height: 320px; object-fit: cover; }
+.ejemplo-masa figcaption { padding: 10px 12px; font-size: .92rem; line-height: 1.45; color: var(--texto); }
+.resumen-envio { margin: 12px 0; }
+.resumen-envio h3 { margin: 0 0 4px; font-size: 1rem; color: var(--azul); }
+.resumen-envio .dato { align-items: start; }
 .error { display: block; color: var(--error); font-size: .85rem; font-weight: 600; margin-top: 6px; }
 input:not([type="file"]), select, textarea {
   width: 100%; min-height: 48px; border: 1.5px solid var(--borde); border-radius: 8px; padding: 10px 12px; background: #fff; font-size: 16px;

@@ -4,7 +4,7 @@
    ========================================================================= */
 'use strict';
 
-const VERSION_APP = 'miyamoto-16';     // subirla junto con VERSION en sw.js
+const VERSION_APP = 'miyamoto-17';     // subirla junto con VERSION en sw.js
 
 const APP = {
   perfil: null,          // { codigo, entidad, nombre, tipo_doc, num_doc, id_evaluador, matricula, dependencia }
@@ -97,7 +97,8 @@ const ICONOS = {
   edificio: '<path d="M5 21V4h10v17M15 9h4v12M3 21h18"/><path d="M8 7h1M11 7h1M8 10.5h1M11 10.5h1M8 14h1M11 14h1"/>',
   salir: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/>',
   descargar: '<path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/>',
-  ruta: '<path d="M3 11l18-8-8 18-2-8-8-2z"/>'
+  ruta: '<path d="M3 11l18-8-8 18-2-8-8-2z"/>',
+  candado: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'
 };
 
 function icono(nombre) {

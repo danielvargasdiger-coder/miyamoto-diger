@@ -404,6 +404,10 @@ var Ficha = (function () {
   function anexo(d, o, consecutivo) {
     var fotos = o.fotos || {};
     var grupos = [];
+    // Movimiento en masa cercano: la foto que el evaluador confirmó contra el ejemplo.
+    if ((fotos.foto_mov_masa || []).length) {
+      grupos.push({ titulo: '8. Movimiento en masa cercano — confirmado por el evaluador', urls: fotos.foto_mov_masa });
+    }
     ['s9', 's10'].forEach(function (sid) {
       var sec = E.seccion(sid);
       sec.campos.forEach(function (c) {
@@ -419,8 +423,8 @@ var Ficha = (function () {
     if (!grupos.length && !justificar) return '';
 
     var L = o.logos || {};
-    var titulo2 = grupos.length && justificar ? 'ANEXO — REGISTRO FOTOGRÁFICO DE DAÑOS Y JUSTIFICACIÓN'
-      : (grupos.length ? 'ANEXO — REGISTRO FOTOGRÁFICO DE DAÑOS' : 'ANEXO — JUSTIFICACIÓN DE LA CLASIFICACIÓN');
+    var titulo2 = grupos.length && justificar ? 'ANEXO — REGISTRO FOTOGRÁFICO Y JUSTIFICACIÓN'
+      : (grupos.length ? 'ANEXO — REGISTRO FOTOGRÁFICO' : 'ANEXO — JUSTIFICACIÓN DE LA CLASIFICACIÓN');
     var h = '<div class="pagina salto">' +
       '<table class="enc"><tr><td class="enc-izq">' + (L.entidad ? '<img src="' + L.entidad + '" alt="">' : '') +
       '</td><td class="enc-cen">' + titulo2 + '<br><span class="enc-sub">Formulario No. ' + esc(consecutivo) + '</span></td><td class="enc-der"></td></tr></table>';
@@ -440,7 +444,7 @@ var Ficha = (function () {
     }
 
     if (grupos.length) {
-      h += '<div class="caja">' + titulo('REGISTRO FOTOGRÁFICO DE DAÑOS EN ELEMENTOS (SECCIONES 9 Y 10)');
+      h += '<div class="caja">' + titulo('REGISTRO FOTOGRÁFICO (MOVIMIENTO EN MASA Y DAÑOS DE LAS SECCIONES 9 Y 10)');
       grupos.forEach(function (g) {
         var filas = '';
         for (var k = 0; k < g.urls.length; k += 2) {

@@ -21,10 +21,8 @@ function datosIniciales(solicitud) {
     d.barrio_vereda = solicitud.barrio || '';
     d.persona_contacto = solicitud.contacto || '';
     d.num_contacto = solicitud.telefono || '';
-    const m = Esquema.codigoDe('municipio', solicitud.municipio);
-    if (m && Esquema.LISTAS.municipio.some((o) => o[0] === m)) d.municipio = m;
   }
-  return d;
+  return Esquema.aplicarFijos(d);
 }
 
 /**
@@ -55,6 +53,7 @@ async function abrirEvaluacion(opciones) {
   }
   // Antes de la "foto" de abajo: así aplicar el perfil no cuenta como un cambio del ingeniero.
   await aplicarPerfil(registro.id, registro.datos);
+  Esquema.aplicarFijos(registro.datos);   // borradores de antes del bloqueo
   APP.actual = {
     id: registro.id,
     datos: registro.datos,
@@ -292,6 +291,9 @@ function htmlCampo(c) {
   const envoltura = (interior, extra) => '<div class="campo campo-' + c.tipo + (extra || '') + '" data-campo="' + c.id + '">' +
     interior + errorVisible(c) + '</div>';
 
+  if (c.fijo) {
+    return envoltura(cabeceraCampo(c) + '<div class="c-sistema c-fijo">' + icono('candado') + esc(Esquema.etiquetaDe(c.lista, c.fijo)) + '</div>');
+  }
   switch (c.tipo) {
     case 'sistema':
       return envoltura(cabeceraCampo(c) + '<div class="c-sistema">' + esc(v || 'Se asigna al enviar') + '</div>');
@@ -302,7 +304,9 @@ function htmlCampo(c) {
         '" value="' + esc(v == null ? '' : v) + '" maxlength="' + (c.tipo === 'texto' ? 300 : 30) + '" autocomplete="off"></label>');
     }
     case 'largo':
-      return envoltura('<label>' + cabeceraCampo(c) + '<textarea rows="3" maxlength="4000" data-id="' + c.id + '">' + esc(v || '') + '</textarea></label>');
+      return envoltura('<label>' + cabeceraCampo(c) + '<textarea rows="' + (c.minLargo ? 5 : 3) + '" maxlength="4000" data-id="' + c.id + '"' +
+        (c.ayuda ? ' placeholder="' + esc(c.ayuda) + '"' : '') + '>' + esc(v || '') + '</textarea></label>' +
+        (c.ayuda ? '<span class="c-nota">' + esc(c.ayuda) + '</span>' : ''));
     case 'fecha':
       return envoltura('<label>' + cabeceraCampo(c) + '<input type="date" data-id="' + c.id + '" value="' + esc(v || '') + '"></label>');
     case 'fechahora':
@@ -337,13 +341,24 @@ function htmlCampo(c) {
     case 'gps':
       return envoltura(cabeceraCampo(c) + htmlGps(v));
     case 'fotos':
-      return envoltura(cabeceraCampo(c) + '<div class="fotos" data-fotos="' + c.id + '"></div>' +
+      return envoltura(cabeceraCampo(c) + (c.ejemploMasa ? htmlEjemploMasa() : '') + '<div class="fotos" data-fotos="' + c.id + '"></div>' +
         '<div class="fotos-botones">' +
         '<label class="' + (c.compacto ? 'btn-secundario btn-chico' : 'btn-principal') + '">' + icono('camara') + 'Tomar foto<input type="file" accept="image/*" capture="environment" data-subir="' + c.id + '" hidden></label>' +
         '<label class="btn-secundario' + (c.compacto ? ' btn-chico' : '') + '">' + icono('galeria') + 'Galería<input type="file" accept="image/*" multiple data-subir="' + c.id + '" hidden></label>' +
         '<span class="c-nota">Máx. ' + c.max + '</span></div>', c.compacto ? ' compacto' : '');
   }
   return '';
+}
+
+/**
+ * Ejemplo de movimiento en masa junto a la foto que se pide: para que el
+ * ingeniero compare antes de dejar el "Sí" (antes se marcaba sin serlo).
+ */
+function htmlEjemploMasa() {
+  return '<figure class="ejemplo-masa"><img src="img/ejemplo-movimiento-masa.jpg" alt="Ejemplo de movimiento en masa" loading="lazy">' +
+    '<figcaption><b>Así se ve un movimiento en masa:</b> terreno desprendido o deslizado, con material suelto (tierra, rocas, ' +
+    'árboles caídos) y una cicatriz o escarpe en la ladera. Una grieta en un muro o un piso hundido <b>no</b> es un movimiento en masa.' +
+    '<br>Tome una foto del movimiento en masa que ve cerca de la edificación.</figcaption></figure>';
 }
 
 /** La solicitud trae coordenadas: sirven si el GPS no alcanza (dentro de una casa, sin cielo). */
@@ -390,11 +405,48 @@ function htmlRevisar() {
   if (s.color && clasif && Esquema.COLOR_DE_CLASIF[clasif] !== s.color) {
     h += '<p class="aviso-suave">' + icono('info') + 'La sugerencia del sistema era <b>' + NOMBRE_COLOR[s.color] + '</b>.</p>';
   }
+  // Sin "Ver la ficha como quedará" (19/09): se quedaban mirándola y olvidaban
+  // enviar. Aquí va un resumen de lo principal y, debajo, el botón de enviar.
+  h += htmlResumen(d);
   h += '<div class="acciones-revisar">' +
-    '<button type="button" class="btn-secundario" id="btn-vista-previa">' + icono('documento') + 'Ver la ficha como quedará</button>' +
     '<button type="button" class="btn-principal" id="btn-enviar"' + (f.length ? ' disabled' : '') + '>' + icono('enviar') + 'Enviar evaluación</button>' +
     '</div><p class="c-nota centro">Si no hay señal, queda en cola y se envía sola apenas vuelva.</p>';
   return h;
+}
+
+/** Resumen de lo más importante para revisar antes de enviar. */
+function htmlResumen(d) {
+  const et = (id) => {
+    const c = Esquema.CAMPOS[id];
+    const v = d[id];
+    if (Esquema.vacio(v)) return '<span class="error">Falta</span>';
+    return esc(c.lista ? Esquema.etiquetaDe(c.lista, v) : v);
+  };
+  const nFotos = (d.fotos_generales || []).length;
+  const danos = [];
+  ['s9', 's10'].forEach((sid) => Esquema.seccion(sid).campos.forEach((c) => {
+    if (c.tipo === 'nlms' && Esquema.visible(c, d) && (d[c.id] === 'm' || d[c.id] === 's')) {
+      danos.push(c.etiqueta + ' (' + (d[c.id] === 's' ? 'severo' : 'moderado') + ')');
+    }
+  }));
+  const colapso = d.colapso_total === 'si' ? 'Total' : d.colapso_parcial === 'si' ? 'Parcial'
+    : (d.colapso_total && d.colapso_parcial ? 'No' : '<span class="error">Falta</span>');
+  const masa = d.mov_masa_cercanos === 'si'
+    ? 'Sí — ' + (d.mov_masa_confirma === 'si' ? (d.foto_mov_masa || []).length + ' foto(s), confirmado' : '<span class="error">falta foto o confirmación</span>')
+    : et('mov_masa_cercanos');
+  const filas = [
+    ['Dirección', esc([d.direccion, d.barrio_vereda].filter(Boolean).join(' · ')) || '<span class="error">Falta</span>'],
+    ['Edificación', et('uso') + ' · ' + esc(d.num_pisos || '?') + ' piso(s)'],
+    ['Sistema estructural', et('sist_estructural')],
+    ['Colapso', colapso],
+    ['Movimiento en masa cercano', masa],
+    ['Daños M/S', danos.length ? esc(danos.join(', ')) : 'Ninguno'],
+    ['Fotos de la fachada', nFotos ? String(nFotos) : '<span class="error">Falta</span>'],
+    ['Ocupación', et('estado_ocupacion')],
+    ['Concepto', d.comentarios_finales ? esc(d.comentarios_finales) : '<span class="error">Falta</span>']
+  ];
+  return '<div class="tarjeta solo-lectura resumen-envio"><h3>Resumen de la evaluación</h3>' + filas.map((x) =>
+    '<div class="dato"><span class="dato-et">' + x[0] + '</span><span class="dato-v">' + x[1] + '</span></div>').join('') + '</div>';
 }
 
 // ---------------------------------------------------------------- EVENTOS
@@ -404,14 +456,22 @@ function enlazarSeccion(raiz) {
   $$('input[data-id], textarea[data-id], select[data-id]', raiz).forEach((el) => {
     const evento = el.tagName === 'SELECT' || el.type === 'date' || el.type === 'datetime-local' ? 'change' : 'input';
     el.addEventListener(evento, () => {
+      const t = Esquema.CAMPOS[el.dataset.id] && Esquema.CAMPOS[el.dataset.id].tipo;
+      if (t === 'entero' || t === 'decimal' || t === 'telefono') {
+        const limpio = soloNumero(el.value, t);
+        if (limpio !== el.value) el.value = limpio;
+      }
       d[el.dataset.id] = el.value;
       cambio(el.tagName === 'SELECT');
     });
   });
 
-  $$('[data-una]', raiz).forEach((b) => b.addEventListener('click', () => {
+  $$('[data-una]', raiz).forEach((b) => b.addEventListener('click', async () => {
     const id = b.dataset.una;
-    d[id] = d[id] === b.dataset.valor && !Esquema.CAMPOS[id].req ? '' : b.dataset.valor;   // opcional: segundo toque desmarca
+    const c = Esquema.CAMPOS[id];
+    if (c.confirmaMasa && b.dataset.valor === 'no') { await descartarMovMasa(); return; }
+    d[id] = d[id] === b.dataset.valor && !c.req ? '' : b.dataset.valor;   // opcional: segundo toque desmarca
+    if (c.excluye && d[id] === 'si') d[c.excluye] = 'no';                 // colapso total <-> parcial
     cambio(true);
   }));
 
@@ -456,10 +516,32 @@ function enlazarSeccion(raiz) {
   if (btnGps) enlazarGps(raiz);
 
   $$('[data-ir]', raiz).forEach((b) => b.addEventListener('click', () => irAPaso(b.dataset.ir, b.dataset.campoIr)));
-  const prev = $('#btn-vista-previa', raiz);
-  if (prev) prev.addEventListener('click', () => abrirVistaPrevia(APP.actual.id, APP.actual.datos, 'Vista previa — esta evaluación AÚN NO se ha enviado.'));
   const env = $('#btn-enviar', raiz);
   if (env) env.addEventListener('click', enviarActual);
+}
+
+/** En los campos de número solo entran números (y un separador decimal). */
+function soloNumero(v, tipo) {
+  if (tipo === 'telefono') return v.replace(/[^0-9 +()-]/g, '');
+  if (tipo === 'entero') return v.replace(/\D/g, '');
+  let t = v.replace(/[^0-9.,]/g, '');
+  const i = t.search(/[.,]/);
+  if (i !== -1) t = t.slice(0, i + 1) + t.slice(i + 1).replace(/[.,]/g, '');
+  return t;
+}
+
+/**
+ * El evaluador comparó su foto con el ejemplo y dijo que NO es un movimiento
+ * en masa: la casilla vuelve a "No" y la foto se borra (no sirve).
+ */
+async function descartarMovMasa() {
+  const d = APP.actual.datos;
+  for (const k of d.foto_mov_masa || []) await quitarFoto(k);
+  d.foto_mov_masa = [];
+  delete d.mov_masa_confirma;
+  d.mov_masa_cercanos = 'no';
+  toast('Listo: se marcó "No" en movimientos en masa y se descartó la foto.');
+  cambio(true);
 }
 
 /**

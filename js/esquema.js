@@ -211,8 +211,8 @@ var Esquema = (function () {
     ] },
     { id: 's3', n: '3', titulo: 'Información general', campos: [
       { id: 'ubicacion', etiqueta: 'Ubicación (WGS 84)', tipo: 'gps', req: true },
-      { id: 'departamento', etiqueta: 'Departamento', tipo: 'una', lista: 'departamento', req: true, desplegable: true },
-      { id: 'municipio', etiqueta: 'Municipio', tipo: 'una', lista: 'municipio', req: true, desplegable: true },
+      { id: 'departamento', etiqueta: 'Departamento', tipo: 'una', lista: 'departamento', req: true, fijo: 'risaralda' },
+      { id: 'municipio', etiqueta: 'Municipio', tipo: 'una', lista: 'municipio', req: true, fijo: 'pereira' },
       { id: 'barrio_vereda', etiqueta: 'Barrio/Vereda', tipo: 'texto', req: true },
       { id: 'zona', etiqueta: 'Zona', tipo: 'una', lista: 'zona', req: true }
     ] },
@@ -251,14 +251,22 @@ var Esquema = (function () {
       { id: 'cambios_rigidez', etiqueta: '6.5 ¿Hay cambios drásticos de rigidez?', tipo: 'una', lista: 'si_no', req: true, si: SI_SISMO }
     ] },
     { id: 's7', n: '7', titulo: 'Peligro global', campos: [
-      { id: 'colapso_total', etiqueta: 'Colapso total', tipo: 'una', lista: 'si_no', req: true, colores: { si: R } },
-      { id: 'colapso_parcial', etiqueta: 'Colapso parcial', tipo: 'una', lista: 'si_no_noclaro', req: true, colores: { si: A } },
+      // Total y parcial se excluyen: marcar "Sí" en uno pone "No" en el otro.
+      { id: 'colapso_total', etiqueta: 'Colapso total', tipo: 'una', lista: 'si_no', req: true, colores: { si: R }, excluye: 'colapso_parcial' },
+      { id: 'colapso_parcial', etiqueta: 'Colapso parcial', tipo: 'una', lista: 'si_no_noclaro', req: true, colores: { si: A }, excluye: 'colapso_total' },
       { id: 'inclinacion_evidente', etiqueta: 'Inclinación evidente', tipo: 'una', lista: 'si_no', req: true, colores: { si: R } },
       { id: 'riesgo_edif_adyacentes', etiqueta: 'Riesgo por edif. adyacentes', tipo: 'una', lista: 'si_no_noclaro', req: true, colores: { si: A } }
     ] },
     { id: 's8', n: '8', titulo: 'Peligro por condiciones geotécnicas', campos: [
       { id: 'licuacion_subsidencia', etiqueta: 'Licuación, asentamiento o subsidencia del terreno', tipo: 'una', lista: 'si_no', req: true, colores: { si: R } },
-      { id: 'mov_masa_cercanos', etiqueta: 'Movimientos en masa cercanos', tipo: 'una', lista: 'si_no', req: true, colores: { si: R } }
+      { id: 'mov_masa_cercanos', etiqueta: 'Movimientos en masa cercanos', tipo: 'una', lista: 'si_no', req: true, colores: { si: R } },
+      // Calidad del dato (19/09): los ingenieros marcaban "Sí" sin serlo (solo ~4 de 10
+      // resultaban en campo). Con "Sí" se pide foto, se muestra un ejemplo y se
+      // confirma; si responde que no corresponde, vuelve a "No" y la foto se borra.
+      { id: 'foto_mov_masa', etiqueta: 'Foto del movimiento en masa', tipo: 'fotos', max: 2, min: 1, req: true,
+        ejemploMasa: true, si: { campo: 'mov_masa_cercanos', es: 'si' } },
+      { id: 'mov_masa_confirma', etiqueta: 'Compare su foto con el ejemplo: ¿corresponde efectivamente a un movimiento en masa?',
+        tipo: 'una', lista: 'si_no', req: true, confirmaMasa: true, si: { campo: 'foto_mov_masa', lleno: true } }
     ] },
     { id: 's9', n: '9', titulo: 'Peligro por daño en elementos estructurales', ayuda: 'N/L: ninguno o leve · M: moderado · S: severo', campos: [] },
     { id: 's10', n: '10', titulo: 'Peligro por daño en elementos no estructurales', ayuda: 'N/L: ninguno o leve · M: moderado · S: severo', campos: [] },
@@ -287,7 +295,9 @@ var Esquema = (function () {
       { id: 'medidas_otro', etiqueta: '¿Cuál otra medida?', tipo: 'texto', req: true, si: { campo: 'medidas_seguridad', incluye: 'otro' } }
     ] },
     { id: 's15', n: '15', titulo: 'Comentarios finales', campos: [
-      { id: 'comentarios_finales', etiqueta: 'Comentarios finales', tipo: 'largo' }
+      // Obligatorio (19/09): el concepto del evaluador sobre la edificación.
+      { id: 'comentarios_finales', etiqueta: 'Concepto de la edificación', tipo: 'largo', req: true, minLargo: 40,
+        ayuda: 'Estado general, daños principales, por qué la clasificó así y qué recomienda.' }
     ] },
     { id: 's16', n: '16', titulo: 'Información del evaluador', soloLectura: true, campos: [
       { id: 'eval_nombre', etiqueta: 'Nombre', tipo: 'texto', req: true, perfil: 'nombre' },
@@ -455,6 +465,10 @@ var Esquema = (function () {
     var v = datos[campo.id];
     if (campo.tipo === 'sistema') return '';
     if (vacio(v)) return campo.req ? 'Falta' : '';
+    if (campo.fijo && v !== campo.fijo) return 'Debe ser ' + etiquetaDe(campo.lista, campo.fijo);
+    if (campo.excluye && v === 'si' && datos[campo.excluye] === 'si') return 'No puede haber colapso total y parcial a la vez';
+    if (campo.minLargo && String(v).trim().length < campo.minLargo) return 'Escriba un concepto más completo (mínimo ' + campo.minLargo + ' letras)';
+    if (campo.confirmaMasa && v !== 'si') return 'Si no corresponde, marque "No" en movimientos en masa';
     if (campo.tipo === 'entero' || campo.tipo === 'decimal') {
       var n = aNumero(v);
       if (n === null) return 'No es un número';
@@ -494,9 +508,18 @@ var Esquema = (function () {
    * material y el sistema ya no corresponde). Así no viaja basura que la
    * ficha después imprimiría como si fuera cierta.
    */
+  /** Departamento y municipio van fijos (Risaralda, Pereira): la app es de la DIGER. */
+  function aplicarFijos(datos) {
+    SECCIONES.forEach(function (s) {
+      s.campos.forEach(function (c) { if (c.fijo) datos[c.id] = c.fijo; });
+    });
+    return datos;
+  }
+
   function limpiarOcultos(datos) {
     var d = {};
     Object.keys(datos || {}).forEach(function (k) { d[k] = datos[k]; });
+    aplicarFijos(d);
     // Dos pasadas: quitar un valor puede ocultar otro que dependía de él.
     for (var pasada = 0; pasada < 3; pasada++) {
       SECCIONES.forEach(function (s) {
@@ -605,6 +628,7 @@ var Esquema = (function () {
     errorDe: errorDe,
     faltantes: faltantes,
     limpiarOcultos: limpiarOcultos,
+    aplicarFijos: aplicarFijos,
     limpiarFiltros: limpiarFiltros,
     aNumero: aNumero,
     coordenadaValida: coordenadaValida,

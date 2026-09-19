@@ -14,7 +14,6 @@ const APP = {
   cola: [],              // evaluaciones terminadas esperando envío
   actual: null,          // { id, datos, solicitud, seccion, alAbrir }
   pestana: 'porEvaluar',
-  verSolicitudes: 'mias',  // 'mias' = solo las asignadas a esta persona; 'todas' = también las sin asignar
   vista: 'lista',        // lista | mapa | tablero
   ultimaSync: null,
   sincronizando: false,

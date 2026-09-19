@@ -41,7 +41,6 @@ async function entrarApp() {
   $('#vista-inicio').hidden = false;
   const cat = await DB.leerKV('catalogo');
   if (cat) { APP.solicitudes = cat.solicitudes || []; APP.historial = cat.historial || []; APP.ultimaSync = cat.cuando; }
-  APP.verSolicitudes = (await DB.leerKV('verSolicitudes')) || 'mias';
   await recargarLocales();
   irAVista(APP.vista || 'lista');
 

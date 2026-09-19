@@ -112,6 +112,9 @@ var Demo = (function () {
     var cuando = new Date((hoy || new Date()).getTime());
     cuando.setDate(cuando.getDate() - Math.floor(i * 26 / N_EVALUACIONES) - (r() < 0.3 ? 1 : 0));
     cuando.setHours(8 + Math.floor(r() * 9), Math.floor(r() * 60), 0, 0);
+    // Las de hoy no pueden quedar con una hora que aún no llega (el formulario rechaza fechas futuras).
+    var ahora = hoy || new Date();
+    if (cuando > ahora) cuando = new Date(ahora.getTime() - (30 + Math.floor(r() * 90)) * 60000);
     var pisos = uno([1, 1, 2, 2, 2, 3, 3, 4, 5]);
 
     var d = {

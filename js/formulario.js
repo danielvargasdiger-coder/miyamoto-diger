@@ -192,11 +192,19 @@ function pintarIndice() {
   $('#barra-progreso').style.width = Math.round(100 * (pedidos - Math.min(total, pedidos)) / pedidos) + '%';
 }
 
-/** Píldora de la barra: la sugerencia del sistema en vivo. */
+/**
+ * Píldora de la barra: la sugerencia del sistema en vivo, hasta que el
+ * evaluador clasifica; desde ahí muestra SU clasificación (no se le
+ * recuerda la sugerencia como si no le hubiera hecho caso).
+ */
 function actualizarSemaforo() {
-  const s = Esquema.sugerencia(APP.actual.datos);
+  const d = APP.actual.datos;
+  const s = Esquema.sugerencia(d);
   const el = $('#semaforo');
-  if (!s.color) {
+  if (d.clasif_habitabilidad) {
+    el.className = 'semaforo ' + COLOR_CLASIF[d.clasif_habitabilidad];
+    el.innerHTML = '<span class="punto"></span>' + NOMBRE_COLOR[COLOR_CLASIF[d.clasif_habitabilidad]];
+  } else if (!s.color) {
     el.className = 'semaforo';
     // Sin la cuenta: "faltan 17" chocaba con el "Faltan 41 datos" de Revisar (son cosas distintas).
     el.innerHTML = '<span class="punto"></span>Sin sugerencia';
@@ -212,7 +220,6 @@ function htmlSeccion(sid) {
   const d = APP.actual.datos;
   let h = '<h2 class="sec-titulo"><span class="sec-n">' + s.n + '</span>' + esc(s.titulo) + '</h2>';
   if (s.ayuda) h += '<p class="sec-ayuda">' + esc(s.ayuda) + '</p>';
-  if (s.sugerencia) h += htmlSugerencia();
   if (sid === 's10' && d.tipo_inspeccion !== 'completa') {
     h += '<p class="aviso-suave">' + icono('info') + 'Inspección <b>exterior</b>: los elementos interiores no se piden.</p>';
   }
@@ -221,7 +228,11 @@ function htmlSeccion(sid) {
   if (s.soloLectura) return h + htmlSoloLectura(visibles);
   const esDano = visibles.some((c) => c.tipo === 'nlms');
   // Sin atajo para "marcar todo N/L": la DIGER pide que cada elemento se revise y marque uno por uno (18/09).
-  h += '<div class="campos' + (esDano ? ' campos-dano' : '') + '">' + (esDano ? gruposDano(visibles) : visibles.map(htmlCampo).join('')) + '</div>';
+  const campos = esDano ? gruposDano(visibles)
+    : visibles.map((c) => (c.id === 'clasif_habitabilidad' ? htmlSugerencia() : '') +
+      (c.id === 'nivel_dano' ? htmlSugerenciaDano() : '') +
+      htmlCampo(/^justificacion_/.test(c.id) ? Object.assign({}, c, { nota: motivoJustificacion(c) }) : c)).join('');
+  h += '<div class="campos' + (esDano ? ' campos-dano' : '') + '">' + campos + '</div>';
   return h;
 }
 
@@ -258,23 +269,68 @@ function htmlSolicitud(s) {
     (s.descripcion ? '<br><span>' + esc(s.descripcion) + '</span>' : '') + '</div>';
 }
 
-function htmlSugerencia() {
-  const s = Esquema.sugerencia(APP.actual.datos);
-  if (!s.color) {
-    return '<div class="sugerencia"><b>Sugerencia del sistema:</b> faltan ' + s.faltan.length +
-      ' casillas de las secciones 7 a 10 para calcularla.</div>';
+/*
+ * Las dos sugerencias (habitabilidad y nivel de daño) usan la MISMA caja,
+ * justo encima de su pregunta: resultado, por qué (máx. 3), una línea de
+ * avisos, las definiciones plegadas y el botón. Poco texto: es un celular.
+ */
+const COLOR_NIVEL = { ninguno_menor: 'verde', moderado: 'amarillo', severo: 'rojo' };
+
+function cajaSugerencia(o) {
+  if (!o.valor) {
+    return '<div class="sugerencia campo-ancho"><b>Sugerencia:</b> complete las secciones 7 a 10 (faltan ' + o.faltan + ').</div>';
   }
-  const motivos = s.motivos.length
-    ? '<ul>' + s.motivos.map((m) => '<li class="m-' + m.color + '">' + esc(m.texto) + '</li>').join('') + '</ul>'
-    : '<p>Ninguna casilla roja o amarilla marcada.</p>';
-  return '<div class="sugerencia s-' + s.color + '"><b>Sugerencia del sistema: ' + NOMBRE_COLOR[s.color] + '</b>' + motivos +
-    '<p class="nota">Según los colores del formulario. La decisión es suya; si clasifica menos grave, se pide justificarlo.</p>' +
-    (APP.actual.datos.clasif_habitabilidad ? '' :
-      '<button type="button" class="btn-secundario btn-chico" data-usar-sugerencia="' + s.clasif + '">Usar la sugerencia</button>') +
+  const extra = o.motivos.length > 3 ? '<li class="mas">y ' + (o.motivos.length - 3) + ' más</li>' : '';
+  const porque = o.motivos.length
+    ? '<ul>' + o.motivos.slice(0, 3).map((m) => '<li>' + esc(m) + '</li>').join('') + extra + '</ul>'
+    : '<p class="nota">' + esc(o.sinMotivos) + '</p>';
+  const defs = '<details class="niveles-def"><summary>¿Qué significa cada opción?</summary><dl>' +
+    o.lista.map((x) => '<dt>' + esc(x[1]) + '</dt><dd>' + esc(o.definiciones[x[0]]) + '</dd>').join('') + '</dl></details>';
+  return '<div class="sugerencia campo-ancho s-' + o.color + '">' +
+    '<div class="sug-cab"><span>Sugerencia</span><b>' + esc(o.etiqueta) + '</b></div>' + porque +
+    (o.avisos && o.avisos.length ? '<p class="nota">' + esc(o.avisos.join(' ')) + '</p>' : '') + defs +
+    (o.elegido ? '' : '<button type="button" class="btn-secundario btn-chico" ' + o.boton + '="' + o.valor + '">Usar la sugerencia</button>') +
     '</div>';
 }
 
+function htmlSugerencia() {
+  const d = APP.actual.datos;
+  const s = Esquema.sugerencia(d);
+  return cajaSugerencia({
+    valor: s.clasif, faltan: s.faltan.length, color: s.color, etiqueta: s.clasif ? Esquema.etiquetaDe('habitabilidad', s.clasif) : '',
+    motivos: s.motivos.map((m) => m.texto), sinMotivos: 'Ninguna casilla roja o amarilla.',
+    lista: Esquema.LISTAS.habitabilidad, definiciones: Esquema.DEFINICION_CLASIF,
+    elegido: !!d.clasif_habitabilidad, boton: 'data-usar-sugerencia'
+  });
+}
+
+function htmlSugerenciaDano() {
+  const d = APP.actual.datos;
+  const s = Esquema.sugerenciaDano(d);
+  return cajaSugerencia({
+    valor: s.nivel, faltan: s.faltan.length, color: COLOR_NIVEL[s.nivel], etiqueta: s.nivel ? Esquema.etiquetaDe('nivel_dano', s.nivel) : '',
+    motivos: s.motivos, sinMotivos: 'Estructura sin daño; daño no estructural leve o aislado.', avisos: s.avisos,
+    lista: Esquema.LISTAS.nivel_dano, definiciones: Esquema.DEFINICION_NIVEL,
+    elegido: !!d.nivel_dano, boton: 'data-usar-dano'
+  });
+}
+
+/** Por qué se pide una justificación: va como nota corta de la misma casilla. */
+function motivoJustificacion(c) {
+  if (c.id === 'justificacion_dano') return Esquema.coherenciaDano(APP.actual.datos).motivo;
+  if (c.id === 'justificacion_clasif') {
+    const s = Esquema.sugerencia(APP.actual.datos);
+    return 'La sugerencia era ' + Esquema.etiquetaDe('habitabilidad', s.clasif) + ': ¿por qué es habitable?';
+  }
+  return '';
+}
+
 function errorVisible(c) {
+  // La incoherencia habitabilidad / nivel de daño se avisa de una vez, no solo al intentar enviar.
+  if (c.coherencia) {
+    const co = Esquema.coherenciaDano(APP.actual.datos);
+    if (co.bloquea) return '<span class="error">' + esc(co.bloquea) + '</span>';
+  }
   if (!APP.actual.mostrarErrores) return '';
   const e = Esquema.errorDe(c, APP.actual.datos);
   return e ? '<span class="error">' + esc(e) + '</span>' : '';
@@ -304,9 +360,9 @@ function htmlCampo(c) {
         '" value="' + esc(v == null ? '' : v) + '" maxlength="' + (c.tipo === 'texto' ? 300 : 30) + '" autocomplete="off"></label>');
     }
     case 'largo':
-      return envoltura('<label>' + cabeceraCampo(c) + '<textarea rows="' + (c.minLargo ? 5 : 3) + '" maxlength="4000" data-id="' + c.id + '"' +
-        (c.ayuda ? ' placeholder="' + esc(c.ayuda) + '"' : '') + '>' + esc(v || '') + '</textarea></label>' +
-        (c.ayuda ? '<span class="c-nota">' + esc(c.ayuda) + '</span>' : ''));
+      return envoltura('<label>' + cabeceraCampo(c) +
+        '<textarea rows="' + (c.id === 'comentarios_finales' ? 4 : 3) + '" maxlength="4000" data-id="' + c.id + '"' +
+        (c.ejemplo ? ' placeholder="' + esc(c.ejemplo) + '"' : '') + '>' + esc(v || '') + '</textarea></label>');
     case 'fecha':
       return envoltura('<label>' + cabeceraCampo(c) + '<input type="date" data-id="' + c.id + '" value="' + esc(v || '') + '"></label>');
     case 'fechahora':
@@ -355,7 +411,8 @@ function htmlCampo(c) {
  * ingeniero compare antes de dejar el "Sí" (antes se marcaba sin serlo).
  */
 function htmlEjemploMasa() {
-  return '<figure class="ejemplo-masa"><img src="img/ejemplo-movimiento-masa.jpg" alt="Ejemplo de movimiento en masa" loading="lazy">' +
+  // Sin loading="lazy": la imagen ya está en el celular (sw.js) y debe verse al instante, aun sin señal.
+  return '<figure class="ejemplo-masa"><img src="img/ejemplo-movimiento-masa.jpg" alt="Ejemplo de movimiento en masa" width="720" height="393" decoding="async">' +
     '<figcaption><b>Así se ve un movimiento en masa:</b> terreno desprendido o deslizado, con material suelto (tierra, rocas, ' +
     'árboles caídos) y una cicatriz o escarpe en la ladera. Una grieta en un muro o un piso hundido <b>no</b> es un movimiento en masa.' +
     '<br>Tome una foto del movimiento en masa que ve cerca de la edificación.</figcaption></figure>';
@@ -402,9 +459,6 @@ function htmlRevisar() {
     h += '<div class="resumen-clasif c-' + COLOR_CLASIF[clasif] + '">' + esc(Esquema.etiquetaDe('habitabilidad', clasif)) +
       (d.nivel_dano ? ' · Daño ' + esc(Esquema.etiquetaDe('nivel_dano', d.nivel_dano).toLowerCase()) : '') + '</div>';
   }
-  if (s.color && clasif && Esquema.COLOR_DE_CLASIF[clasif] !== s.color) {
-    h += '<p class="aviso-suave">' + icono('info') + 'La sugerencia del sistema era <b>' + NOMBRE_COLOR[s.color] + '</b>.</p>';
-  }
   // Sin "Ver la ficha como quedará" (19/09): se quedaban mirándola y olvidaban
   // enviar. Aquí va un resumen de lo principal y, debajo, el botón de enviar.
   h += htmlResumen(d);
@@ -443,7 +497,7 @@ function htmlResumen(d) {
     ['Daños M/S', danos.length ? esc(danos.join(', ')) : 'Ninguno'],
     ['Fotos de la fachada', nFotos ? String(nFotos) : '<span class="error">Falta</span>'],
     ['Ocupación', et('estado_ocupacion')],
-    ['Concepto', d.comentarios_finales ? esc(d.comentarios_finales) : '<span class="error">Falta</span>']
+    ['Comentarios', d.comentarios_finales ? esc(d.comentarios_finales) : '<span class="error">Falta</span>']
   ];
   return '<div class="tarjeta solo-lectura resumen-envio"><h3>Resumen de la evaluación</h3>' + filas.map((x) =>
     '<div class="dato"><span class="dato-et">' + x[0] + '</span><span class="dato-v">' + x[1] + '</span></div>').join('') + '</div>';
@@ -488,6 +542,8 @@ function enlazarSeccion(raiz) {
 
   const usar = $('[data-usar-sugerencia]', raiz);
   if (usar) usar.addEventListener('click', () => { d.clasif_habitabilidad = usar.dataset.usarSugerencia; cambio(true); });
+  const usarDano = $('[data-usar-dano]', raiz);
+  if (usarDano) usarDano.addEventListener('click', () => { d.nivel_dano = usarDano.dataset.usarDano; cambio(true); });
 
   $$('[data-fotos]', raiz).forEach((cont) => pintarMiniaturas(cont.dataset.fotos, cont));
   $$('input[data-subir]', raiz).forEach((inp) => inp.addEventListener('change', async () => {
@@ -496,8 +552,11 @@ function enlazarSeccion(raiz) {
     cargando(true, 'Preparando fotos…');
     try {
       d[c.id] = await agregarFotos(APP.actual.id, c.id, inp.files, c.max);
-      cambio(false);
-      pintarMiniaturas(c.id, $('[data-fotos="' + c.id + '"]'));
+      // Redibujar YA: lo que depende de la foto (la confirmación del
+      // movimiento en masa) no salía hasta el siguiente toque.
+      cambio(true);
+      const conf = c.ejemploMasa && $('[data-campo="mov_masa_confirma"]');
+      if (conf) conf.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } catch (e) { toast('No se pudo guardar la foto: ' + e.message, 'error'); }
     finally { cargando(false); inp.value = ''; }
   }));

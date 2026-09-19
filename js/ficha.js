@@ -419,7 +419,7 @@ var Ficha = (function () {
         grupos.push({ titulo: sec.n + '. ' + nombre + (nivel ? ' — daño ' + nivel : ''), urls: fotos[c.id] });
       });
     });
-    var justificar = E.menosGraveQueSugerencia(d) || !!d.justificacion_clasif;
+    var justificar = E.menosGraveQueSugerencia(d) || !!d.justificacion_clasif || !!d.justificacion_dano;
     if (!grupos.length && !justificar) return '';
 
     var L = o.logos || {};
@@ -440,6 +440,9 @@ var Ficha = (function () {
         '<div class="texto">Sugerencia automática según los colores del formulario (secciones 7 a 10): ' + bloqueSug +
         '<br>Clasificación del evaluador: <b>' + esc(elegido) + '</b>' +
         (d.justificacion_clasif ? '<br>Justificación: ' + esc(d.justificacion_clasif) : '') +
+        (d.nivel_dano ? '<br>Nivel de daño del evaluador: <b>' + esc(E.etiquetaDe('nivel_dano', d.nivel_dano)) + '</b>' +
+          (E.sugerenciaDano(d).nivel ? ' (sugerencia: ' + esc(E.etiquetaDe('nivel_dano', E.sugerenciaDano(d).nivel)) + ')' : '') : '') +
+        (d.justificacion_dano ? '<br>Justificación del nivel de daño: ' + esc(d.justificacion_dano) : '') +
         '<br><span class="nota">La sugerencia es una ayuda: la clasificación la decide el evaluador.</span></div></div>';
     }
 

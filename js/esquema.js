@@ -20,7 +20,7 @@
 var Esquema = (function () {
   'use strict';
 
-  var VERSION = '2026-09-18.3';
+  var VERSION = '2026-09-19.1';
 
   // ---------------------------------------------------------------- LISTAS
   // [código, etiqueta, (filtro)]. El código es lo que viaja y se guarda en
@@ -276,8 +276,10 @@ var Esquema = (function () {
     ] },
     { id: 's12', n: '12', titulo: 'Clasificación de habitabilidad y del daño', sugerencia: true, campos: [
       { id: 'clasif_habitabilidad', etiqueta: 'Clasificación de habitabilidad', tipo: 'una', lista: 'habitabilidad', req: true },
-      { id: 'justificacion_clasif', etiqueta: 'Justifique por qué clasifica menos grave que la sugerencia', tipo: 'largo', req: true, si: { menosGraveQueSugerencia: true } },
-      { id: 'nivel_dano', etiqueta: 'Clasificación del daño', tipo: 'una', lista: 'nivel_dano', req: true },
+      { id: 'justificacion_clasif', etiqueta: 'Justifique la habitabilidad', tipo: 'largo', req: true, minLargo: 20, si: { menosGraveQueSugerencia: true } },
+      { id: 'nivel_dano', etiqueta: 'Clasificación del daño', tipo: 'una', lista: 'nivel_dano', req: true, coherencia: true },
+      { id: 'justificacion_dano', etiqueta: 'Justifique el nivel de daño', tipo: 'largo', req: true, minLargo: 20,
+        si: { justificarDano: true } },
       { id: 'eval_previa', etiqueta: '¿Existe una evaluación previa?', tipo: 'una', lista: 'si_no', req: true },
       { id: 'eval_previa_tipo', etiqueta: 'Tipo de evaluación', tipo: 'texto', si: SI_PREVIA },
       { id: 'eval_previa_entidad', etiqueta: 'Entidad', tipo: 'texto', si: SI_PREVIA },
@@ -295,9 +297,9 @@ var Esquema = (function () {
       { id: 'medidas_otro', etiqueta: '¿Cuál otra medida?', tipo: 'texto', req: true, si: { campo: 'medidas_seguridad', incluye: 'otro' } }
     ] },
     { id: 's15', n: '15', titulo: 'Comentarios finales', campos: [
-      // Obligatorio (19/09): el concepto del evaluador sobre la edificación.
-      { id: 'comentarios_finales', etiqueta: 'Concepto de la edificación', tipo: 'largo', req: true, minLargo: 40,
-        ayuda: 'Estado general, daños principales, por qué la clasificó así y qué recomienda.' }
+      // Obligatorio (19/09), pero sin presionar: solo una guía corta.
+      { id: 'comentarios_finales', etiqueta: 'Comentarios finales', tipo: 'largo', req: true, minLargo: 20,
+        nota: 'Puntos relevantes sobre la edificación que no quedaron en el formulario: observaciones, riesgos o recomendaciones.' }
     ] },
     { id: 's16', n: '16', titulo: 'Información del evaluador', soloLectura: true, campos: [
       { id: 'eval_nombre', etiqueta: 'Nombre', tipo: 'texto', req: true, perfil: 'nombre' },
@@ -407,10 +409,168 @@ var Esquema = (function () {
     };
   }
 
+  // ---------------------------------------------------------------- NIVEL DE DAÑO
+  /*
+   * NIVEL DE DAÑO (19/09), con criterio de patología estructural.
+   *
+   * Habitabilidad y nivel de daño miden cosas distintas:
+   *  - Nivel de daño: cuánta capacidad perdió LA ESTRUCTURA (sistema de
+   *    cargas verticales y de resistencia sísmica).
+   *  - Habitabilidad: si es seguro estar ahí, por el daño propio o por
+   *    amenazas de afuera (movimiento en masa, edificación vecina).
+   *
+   * Reglas (se aplica la más grave que se cumpla):
+   *  SEVERO — la estructura perdió capacidad de forma importante:
+   *   S1 colapso total o parcial;
+   *   S2 inclinación evidente (desplome permanente);
+   *   S3 cualquier elemento ESTRUCTURAL con daño S (un elemento principal
+   *      ya no trabaja: rótulas, aplastamiento, acero expuesto o pandeado);
+   *   S4 elemento VERTICAL (columnas, muros portantes, nodos, riostras) con M
+   *      en una edificación con piso débil, columna corta o cambios drásticos
+   *      de rigidez: ahí se concentra la demanda y una réplica lo lleva a S;
+   *   S5 muros portantes con M en material FRÁGIL (mampostería simple,
+   *      bahareque, tapia): fallan sin aviso, no hay "moderado" que dure.
+   *  MODERADO — daño estructural reparable o daño que amenaza a las personas:
+   *   M1 cualquier elemento estructural con M;
+   *   M2 colapso parcial "no es claro";
+   *   M3 licuación, asentamiento o subsidencia (afecta la cimentación);
+   *   M4 un no estructural que PUEDE CAER con S (muros de fachada/antepechos,
+   *      balcones, tanques elevados, escaleras);
+   *   M5 tres o más no estructurales con M o S (daño generalizado).
+   *  NINGUNO/MENOR — lo demás: estructura en N/L y daño no estructural aislado.
+   *
+   * Las amenazas externas NO suben el nivel de daño (no son daño de la
+   * estructura); suben la habitabilidad, que ya las toma de los colores.
+   */
+  var NIVELES = ['ninguno_menor', 'moderado', 'severo'];
+  var VERTICALES = ['dano_columnas', 'dano_muros_portantes', 'dano_nodos', 'dano_riostras'];
+  var NO_ESTR_QUE_CAEN = ['dano_muros_fachada', 'dano_balcones', 'dano_tanques', 'dano_escaleras'];
+  var SISTEMAS_FRAGILES = ['mamp_simple', 'muros_bahareque', 'muros_tapia'];
+  var IRREGULARIDADES = ['piso_debil', 'columna_corta', 'cambios_rigidez'];
+  // Licuación NO va aquí: es el terreno de la propia cimentación y sube el nivel de daño (M3).
+  var AMENAZAS_EXTERNAS = ['mov_masa_cercanos', 'riesgo_edif_adyacentes'];
+
+  /** Qué significa cada nivel: se muestra al evaluador junto a la pregunta. */
+  var DEFINICION_NIVEL = {
+    ninguno_menor: 'Estructura intacta. Fisuras finas en acabados o muros divisorios.',
+    moderado: 'Estructura con daño reparable, o elementos que pueden caer.',
+    severo: 'Estructura comprometida: grietas abiertas, concreto aplastado, acero expuesto, desplome o colapso.'
+  };
+  var DEFINICION_CLASIF = {
+    habitable: 'Se puede ocupar con normalidad.',
+    uso_restringido: 'Solo se usan las zonas seguras; hay peligros localizados.',
+    no_habitable: 'No se puede entrar ni ocupar: peligro para la vida.'
+  };
+
+  function sugerenciaDano(datos) {
+    datos = datos || {};
+    var base = sugerencia(datos);
+    if (base.faltan.length) return { nivel: null, motivos: [], avisos: [], faltan: base.faltan };
+    var severo = [], moderado = [], avisos = [];
+    var si = function (id) { return datos[id] === 'si'; };
+    var dice = function (id) { return CAMPOS[id].etiqueta + ': ' + etiquetaDe(CAMPOS[id].lista, datos[id]); };
+
+    ['colapso_total', 'colapso_parcial', 'inclinacion_evidente'].forEach(function (id) { if (si(id)) severo.push(dice(id)); });
+    if (datos.colapso_parcial === 'no_claro') moderado.push(dice('colapso_parcial'));
+    if (si('licuacion_subsidencia')) moderado.push('Licuación o asentamiento: Sí');
+
+    var irregular = IRREGULARIDADES.filter(function (id) { return si(id) && visible(CAMPOS[id], datos); })
+      .map(function (id) { return CAMPOS[id].etiqueta.replace(/^6\.\d+ ¿Hay (piso con )?/, '').replace(/\?$/, ''); });
+    var fragil = SISTEMAS_FRAGILES.indexOf(datos.sist_estructural) !== -1;
+
+    seccion('s9').campos.forEach(function (c) {
+      if (c.tipo !== 'nlms' || !visible(c, datos)) return;
+      var v = datos[c.id];
+      if (v === 's') severo.push(c.etiqueta + ': S');
+      if (v !== 'm') return;
+      if (VERTICALES.indexOf(c.id) !== -1 && irregular.length) {
+        severo.push(c.etiqueta + ': M, con ' + irregular.join(' y ').toLowerCase());
+      } else if (c.id === 'dano_muros_portantes' && fragil) {
+        severo.push('Muros portantes: M, en ' + etiquetaDe('sistema_estructural', datos.sist_estructural).toLowerCase());
+      } else moderado.push(c.etiqueta + ': M');
+    });
+
+    var noEstr = [];
+    seccion('s10').campos.forEach(function (c) {
+      if (c.tipo !== 'nlms' || !visible(c, datos)) return;
+      var v = datos[c.id];
+      if (v !== 'm' && v !== 's') return;
+      noEstr.push(c.etiqueta);
+      if (v === 's' && NO_ESTR_QUE_CAEN.indexOf(c.id) !== -1) moderado.push(c.etiqueta + ': S, puede caer');
+    });
+    if (noEstr.length >= 3) moderado.push('Daño no estructural en ' + noEstr.length + ' elementos');
+
+    // Lo que limita la sugerencia, en pocas palabras.
+    if (datos.tipo_inspeccion === 'exterior') avisos.push('Solo se vio por fuera: el daño puede ser mayor.');
+    if (amenazasExternas(datos).length) avisos.push('Las amenazas externas cuentan en la habitabilidad, no aquí.');
+
+    var nivel = severo.length ? 'severo' : (moderado.length ? 'moderado' : 'ninguno_menor');
+    return { nivel: nivel, motivos: severo.length ? severo : moderado, avisos: avisos, faltan: [] };
+  }
+
+  /** Amenazas externas marcadas en "Sí" (etiquetas). */
+  function amenazasExternas(datos) {
+    return AMENAZAS_EXTERNAS.filter(function (id) { return datos[id] === 'si'; })
+      .map(function (id) { return CAMPOS[id].etiqueta; });
+  }
+
+  /*
+   * Coherencia habitabilidad × nivel de daño (las 9 combinaciones):
+   *
+   *                 Ninguno/Menor        Moderado            Severo
+   *   Habitable     bien                 justificar          BLOQUEA
+   *   Uso restr.    bien                 bien                bien
+   *   No habitable  BLOQUEA (*)          bien                bien
+   *
+   *   (*) salvo amenaza externa con la estructura sana (sugerencia
+   *       Ninguno/Menor): se permite y se pide explicar la amenaza.
+   * Además, siempre: nivel menos grave que la sugerencia -> justificar.
+   */
+  function coherenciaDano(datos) {
+    datos = datos || {};
+    var r = { bloquea: '', justificar: false, motivo: '' };
+    var nivel = datos.nivel_dano, clasif = datos.clasif_habitabilidad;
+    if (!nivel) return r;
+    var sug = sugerenciaDano(datos);
+    if (clasif === 'habitable' && nivel === 'severo') {
+      r.bloquea = 'Con daño severo no puede ser Habitable.';
+      return r;
+    }
+    // Si sigue las DOS sugerencias no se le pide nada: el sistema no se contradice a sí mismo.
+    if (clasif === sugerencia(datos).clasif && nivel === sug.nivel) return r;
+    if (clasif === 'no_habitable' && nivel === 'ninguno_menor') {
+      var ext = amenazasExternas(datos);
+      if (!ext.length || (sug.nivel && sug.nivel !== 'ninguno_menor')) {
+        r.bloquea = 'No habitable con daño Ninguno/Menor solo si la estructura está sana y hay movimiento en masa cercano ' +
+          'o riesgo por edificación vecina.';
+        return r;
+      }
+      r.justificar = true;
+      r.motivo = 'Por amenaza externa: ¿cuál es y por qué impide ocuparla?';
+      return r;
+    }
+    if (sug.nivel && NIVELES.indexOf(nivel) < NIVELES.indexOf(sug.nivel)) {
+      r.justificar = true;
+      r.motivo = 'Es menos grave que la sugerencia (' + etiquetaDe('nivel_dano', sug.nivel) + ').';
+      return r;
+    }
+    if (clasif === 'habitable' && nivel === 'moderado') {
+      r.justificar = true;
+      r.motivo = 'Habitable con daño moderado: ¿por qué es seguro?';
+      return r;
+    }
+    return r;
+  }
+
+  /**
+   * Se pide justificar la habitabilidad SOLO si elige Habitable y el sistema
+   * sugería amarillo o rojo (19/09). Bajar de No habitable a Uso restringido
+   * no se justifica: el evaluador ve en sitio si no es tan crítico, y no
+   * debe sentirse juzgado.
+   */
   function menosGraveQueSugerencia(datos) {
     var s = sugerencia(datos);
-    var elegido = COLOR_DE_CLASIF[datos.clasif_habitabilidad];
-    return !!(s.color && elegido && GRAVEDAD[elegido] < GRAVEDAD[s.color]);
+    return !!(s.color && s.color !== 'verde' && datos.clasif_habitabilidad === 'habitable');
   }
 
   // ---------------------------------------------------------------- CONDICIONES
@@ -419,6 +579,7 @@ var Esquema = (function () {
     if (cond.todos) return cond.todos.every(function (c) { return cumple(c, d); });
     if (cond.alguno) return cond.alguno.some(function (c) { return cumple(c, d); });
     if (cond.menosGraveQueSugerencia) return menosGraveQueSugerencia(d);
+    if (cond.justificarDano) return coherenciaDano(d).justificar;
     var v = d[cond.campo];
     if ('es' in cond) {
       var lista = [].concat(cond.es);
@@ -467,7 +628,8 @@ var Esquema = (function () {
     if (vacio(v)) return campo.req ? 'Falta' : '';
     if (campo.fijo && v !== campo.fijo) return 'Debe ser ' + etiquetaDe(campo.lista, campo.fijo);
     if (campo.excluye && v === 'si' && datos[campo.excluye] === 'si') return 'No puede haber colapso total y parcial a la vez';
-    if (campo.minLargo && String(v).trim().length < campo.minLargo) return 'Escriba un concepto más completo (mínimo ' + campo.minLargo + ' letras)';
+    if (campo.minLargo && String(v).trim().length < campo.minLargo) return 'Mínimo ' + campo.minLargo + ' letras';
+    if (campo.coherencia) { var co = coherenciaDano(datos); if (co.bloquea) return co.bloquea; }
     if (campo.confirmaMasa && v !== 'si') return 'Si no corresponde, marque "No" en movimientos en masa';
     if (campo.tipo === 'entero' || campo.tipo === 'decimal') {
       var n = aNumero(v);
@@ -625,6 +787,11 @@ var Esquema = (function () {
     visible: visible,
     sugerencia: sugerencia,
     menosGraveQueSugerencia: menosGraveQueSugerencia,
+    sugerenciaDano: sugerenciaDano,
+    coherenciaDano: coherenciaDano,
+    amenazasExternas: amenazasExternas,
+    DEFINICION_NIVEL: DEFINICION_NIVEL,
+    DEFINICION_CLASIF: DEFINICION_CLASIF,
     errorDe: errorDe,
     faltantes: faltantes,
     limpiarOcultos: limpiarOcultos,

@@ -17,19 +17,19 @@ const FILTROS_MAPA = [['todas', 'Todas'], ['porEvaluar', 'Por evaluar'], ['evalu
 /** Puntos del mapa a partir de lo que hay en el celular. */
 function puntosDelMapa() {
   const puntos = [];
-  solicitudesPendientes().forEach((s) => {
+  solicitudesPendientes().filter(coincideSolicitud).forEach((s) => {
     if (!Esquema.coordenadaValida(s.lat, s.lon)) return;
     puntos.push({ tipo: 'porEvaluar', lat: +s.lat, lon: +s.lon, s });
   });
   const vistos = new Set();
   (APP.enviadasLocal || []).concat(APP.historial).forEach((h) => {
-    if (vistos.has(h.id) || !Esquema.coordenadaValida(h.lat, h.lon)) return;
+    if (vistos.has(h.id) || !Esquema.coordenadaValida(h.lat, h.lon) || !coincideEvaluacion(h)) return;
     vistos.add(h.id);
     puntos.push({ tipo: 'evaluada', color: COLOR_CLASIF[h.clasif] || 'sin', lat: +h.lat, lon: +h.lon, h });
   });
   APP.cola.forEach((c) => {
     const u = c.datos.ubicacion || {};
-    if (!Esquema.coordenadaValida(u.lat, u.lon)) return;
+    if (!Esquema.coordenadaValida(u.lat, u.lon) || !coincideBusqueda(c.datos.direccion, c.datos.barrio_vereda, c.datos.id_solicitud)) return;
     puntos.push({ tipo: 'evaluada', color: COLOR_CLASIF[c.datos.clasif_habitabilidad] || 'sin', lat: +u.lat, lon: +u.lon,
       h: Object.assign({ id: c.id, num_formulario: 'En cola' }, resumenDeDatos(c.datos)) });
   });
@@ -88,7 +88,7 @@ function pintarMapa() {
   // y parece que no queda nada por evaluar (pasó en taludes).
   // "Por evaluar" cuenta lo mismo que la lista, aunque alguna visita no tenga
   // ubicación (el celular decía 0 en el mapa y 1 en la lista).
-  const sinUbicacion = solicitudesPendientes().filter((s) => !Esquema.coordenadaValida(s.lat, s.lon)).length;
+  const sinUbicacion = solicitudesPendientes().filter(coincideSolicitud).filter((s) => !Esquema.coordenadaValida(s.lat, s.lon)).length;
   const conPunto = todos.filter((p) => p.tipo === 'porEvaluar').length;
   const cuentas = { porEvaluar: conPunto + sinUbicacion, evaluadas: todos.length - conPunto };
   cuentas.todas = cuentas.porEvaluar + cuentas.evaluadas;

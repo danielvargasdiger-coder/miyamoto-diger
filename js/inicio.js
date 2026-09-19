@@ -53,9 +53,8 @@ function pintarInicio() {
   if (!APP.perfil) return;
   if (APP.vista === 'mapa') pintarMapa();
   if (APP.vista === 'tablero') pintarTablero();
-  const pend = solicitudesPendientes();
-  const enviadas = APP.cola.length + (APP.enviadasLocal || []).length + APP.historial.length;
-  const cuentas = { porEvaluar: pend.length, borradores: APP.borradores.length, enviadas };
+  const pend = solicitudesPendientes().filter(coincideSolicitud);
+  const cuentas = { porEvaluar: pend.length, borradores: borradoresVisibles().length, enviadas: enviadasVisibles().length };
   $$('.pestana').forEach((b) => {
     const activa = b.dataset.pestana === APP.pestana;
     b.setAttribute('aria-selected', activa);
@@ -73,6 +72,7 @@ function vacioHtml(titulo, texto) {
 }
 
 function htmlPorEvaluar(pend) {
+  if (!pend.length && APP.busqueda) return vacioBusqueda();
   if (!pend.length) {
     return vacioHtml('No tiene visitas asignadas',
       'Aquí aparecen las visitas que la DIGER le asigne. Para evaluar una edificación que no está en la lista, toque el botón +.');
@@ -98,9 +98,32 @@ function htmlPorEvaluar(pend) {
   }).join('');
 }
 
+function borradoresVisibles() {
+  return APP.borradores.filter((b) => { const d = b.datos || {}; return coincideBusqueda(d.direccion, d.barrio_vereda, d.nombre_edificacion, d.id_solicitud, d.persona_contacto); });
+}
+
+/** Cola y enviadas (sin repetir), ya filtradas por la búsqueda. */
+function enviadasVisibles() {
+  const r = [];
+  APP.cola.forEach((c) => { if (coincideBusqueda(c.num_formulario, c.datos.direccion, c.datos.barrio_vereda, c.datos.id_solicitud, c.datos.eval_nombre)) r.push({ cola: c }); });
+  const vistos = new Set();
+  (APP.enviadasLocal || []).concat(APP.historial).forEach((h) => {
+    if (vistos.has(h.id)) return;
+    vistos.add(h.id);
+    if (coincideEvaluacion(h)) r.push({ h });
+  });
+  return r;
+}
+
+function vacioBusqueda() {
+  return vacioHtml('Nada coincide con «' + APP.busqueda + '»', 'Revise lo escrito o borre la búsqueda (la X del buscador).');
+}
+
 function htmlBorradores() {
-  if (!APP.borradores.length) return vacioHtml('Sin borradores', 'Las evaluaciones que deje a medias quedan aquí, solo en este celular.');
-  return APP.borradores.map((b) => {
+  const lista = borradoresVisibles();
+  if (!lista.length && APP.busqueda) return vacioBusqueda();
+  if (!lista.length) return vacioHtml('Sin borradores', 'Las evaluaciones que deje a medias quedan aquí, solo en este celular.');
+  return lista.map((b) => {
     const d = b.datos || {};
     const faltan = Esquema.faltantes(d).length;
     return '<article class="tarjeta">' +
@@ -122,7 +145,9 @@ function chipClasif(clasif) {
 
 function htmlEnviadas() {
   const partes = [];
-  APP.cola.forEach((c) => {
+  const items = enviadasVisibles();
+  if (!items.length && APP.busqueda) return vacioBusqueda();
+  items.filter((x) => x.cola).map((x) => x.cola).forEach((c) => {
     const d = c.datos;
     partes.push('<article class="tarjeta en-cola">' +
       '<div class="t-cab"><span class="etiqueta-cola">' + icono('sincronizar') + 'Por enviar</span>' + chipClasif(d.clasif_habitabilidad) + '</div>' +
@@ -132,10 +157,7 @@ function htmlEnviadas() {
       '<div class="t-pie"><span></span><button type="button" class="btn-secundario btn-chico" data-ver-cola="' + esc(c.id) + '">' + icono('documento') + 'Ver ficha</button></div>' +
       '</article>');
   });
-  const vistos = new Set();
-  (APP.enviadasLocal || []).concat(APP.historial).forEach((h) => {
-    if (vistos.has(h.id)) return;
-    vistos.add(h.id);
+  items.filter((x) => x.h).map((x) => x.h).forEach((h) => {
     partes.push('<article class="tarjeta">' +
       '<div class="t-cab"><span class="t-id">' + esc(h.num_formulario || '') + '</span>' + chipClasif(h.clasif) + '</div>' +
       '<h3>' + esc(h.direccion || 'Sin dirección') + '</h3>' +
@@ -393,7 +415,7 @@ function abrirMenu() {
   pintarCompartir();
   firmaPendiente = null;
   pintarFirmas(p.firma);
-  $('#menu-version').textContent = 'Versión ' + VERSION_APP + ' · formulario ' + Esquema.VERSION +
+  $('#menu-version').textContent = VERSION_APP + ' · formulario ' + Esquema.VERSION +
     (APP.huellaServidor && APP.huellaServidor !== Esquema.huella() ? ' · ⚠ el servidor tiene otro esquema' : '');
   $('#vista-menu').hidden = false;
   document.body.classList.add('sin-scroll');

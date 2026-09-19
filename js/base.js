@@ -4,7 +4,7 @@
    ========================================================================= */
 'use strict';
 
-const VERSION_APP = 'miyamoto-13';     // subirla junto con VERSION en sw.js
+const VERSION_APP = 'miyamoto-15';     // subirla junto con VERSION en sw.js
 
 const APP = {
   perfil: null,          // { codigo, entidad, nombre, tipo_doc, num_doc, id_evaluador, matricula, dependencia }
@@ -15,6 +15,7 @@ const APP = {
   actual: null,          // { id, datos, solicitud, seccion, alAbrir }
   pestana: 'porEvaluar',
   vista: 'lista',        // lista | mapa | tablero
+  busqueda: '',          // lo escrito en el buscador (filtra Visitas, Mapa y Tablero)
   ultimaSync: null,
   sincronizando: false,
   huellaServidor: null
@@ -273,6 +274,29 @@ function urlComoLlegar(s) {
   const destino = Esquema.coordenadaValida(s.lat, s.lon) ? s.lat + ',' + s.lon
     : [s.direccion, s.barrio, s.municipio || 'Pereira', 'Risaralda'].filter(Boolean).join(', ');
   return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(destino);
+}
+
+// ---------------------------------------------------------------- BÚSQUEDA
+/**
+ * Un solo buscador para Visitas, Mapa y Tablero. Busca en lo que ya está en
+ * el celular (al instante y sin señal): sin importar tildes ni mayúsculas, y
+ * con varias palabras todas deben aparecer ("cuba 12" encuentra "Mz 4 Cs 12,
+ * Cuba"). Alcanza a las 800 evaluaciones más recientes que baja la
+ * sincronización; las más viejas se buscan en la hoja de Google.
+ */
+function coincideBusqueda() {
+  const q = Esquema.normalizarTexto(APP.busqueda);
+  if (!q) return true;
+  const texto = Esquema.normalizarTexto(Array.prototype.slice.call(arguments).filter((x) => x != null && x !== '').join(' '));
+  return q.split(/\s+/).every((p) => texto.indexOf(p) !== -1);
+}
+
+function coincideSolicitud(s) {
+  return coincideBusqueda(s.id_solicitud, s.direccion, s.barrio, s.municipio, s.contacto, s.telefono, s.descripcion, s.asignado);
+}
+
+function coincideEvaluacion(h) {
+  return coincideBusqueda(h.num_formulario, h.direccion, h.barrio, h.municipio, h.evaluador, h.id_solicitud);
 }
 
 /** Quién es, para el registro de TECNICOS y para recibir solo sus visitas asignadas. */

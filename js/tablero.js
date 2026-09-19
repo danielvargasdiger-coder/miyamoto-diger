@@ -12,8 +12,8 @@
    ========================================================================= */
 'use strict';
 
-const TABLERO = { periodo: '30', quien: 'todas', mapa: null, filtros: {}, mostrar: 20 };
-const PERIODOS = [['7', '7 días'], ['30', '30 días'], ['todo', 'Todo']];
+const TABLERO = { periodo: '30', quien: 'todas', mapa: null, filtros: {}, mostrar: 20, desde: '', hasta: '' };
+const PERIODOS = [['7', '7 días'], ['30', '30 días'], ['todo', 'Todo'], ['rango', 'Entre fechas']];
 const VACIO = '__vacio__';
 
 /** Filtros que se aplican desde las gráficas: cómo sacar el valor y cómo nombrarlo. */
@@ -39,12 +39,23 @@ function evaluacionesConocidas() {
   return r;
 }
 
-/** Periodo y "todo el equipo / solo las mías" (los selectores de arriba). */
+/** Rango elegido (AAAA-MM-DD); por defecto, los últimos 30 días. */
+function rangoDeFechas() {
+  const hoy = diaDe(new Date());
+  if (!TABLERO.hasta) TABLERO.hasta = hoy;
+  if (!TABLERO.desde) TABLERO.desde = diaDe(new Date(Date.now() - 29 * 86400000));
+  return TABLERO.desde <= TABLERO.hasta ? [TABLERO.desde, TABLERO.hasta] : [TABLERO.hasta, TABLERO.desde];
+}
+
+/** Periodo, "todo el equipo / solo las mías" (los selectores de arriba) y el buscador. */
 function evaluacionesDelPeriodo() {
-  const dias = TABLERO.periodo === 'todo' ? null : Number(TABLERO.periodo);
+  const rango = TABLERO.periodo === 'rango' ? rangoDeFechas() : null;
+  const dias = TABLERO.periodo === 'todo' || rango ? null : Number(TABLERO.periodo);
   const desde = dias ? Date.now() - dias * 86400000 : 0;
   const yo = Esquema.normalizarTexto(APP.perfil && APP.perfil.nombre);
   return evaluacionesConocidas().filter((e) => {
+    if (!coincideEvaluacion(e)) return false;
+    if (rango) { const d = diaDe(e.fecha); if (!d || d < rango[0] || d > rango[1]) return false; }
     if (desde && !(new Date(e.fecha).getTime() >= desde)) return false;
     if (TABLERO.quien === 'mias' && Esquema.normalizarTexto(e.evaluador) !== yo) return false;
     return true;
@@ -92,12 +103,21 @@ function barras(clave, datos, colorBase) {
   }).join('') + '</div>';
 }
 
-/** Columnas por día de los últimos N días (máx. 30). Cada día se toca para filtrar. */
+/**
+ * Columnas por día. Últimos 7 o 30 días; con "Entre fechas", los días del
+ * rango (si pasa de 62, los últimos 62, para que las columnas se puedan tocar).
+ * Cada día se toca para filtrar.
+ */
 function porDia(lista) {
-  const n = TABLERO.periodo === '7' ? 7 : 30;
-  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  let fin = new Date(); fin.setHours(12, 0, 0, 0);
+  let n = TABLERO.periodo === '7' ? 7 : 30;
+  if (TABLERO.periodo === 'rango') {
+    const [a, b] = rangoDeFechas();
+    fin = new Date(b + 'T12:00');
+    n = Math.min(62, Math.round((fin - new Date(a + 'T12:00')) / 86400000) + 1);
+  }
   const dias = [];
-  for (let i = n - 1; i >= 0; i--) dias.push(diaDe(new Date(hoy.getTime() - i * 86400000 + 43200000)));
+  for (let i = n - 1; i >= 0; i--) dias.push(diaDe(new Date(fin.getTime() - i * 86400000)));
   const cuentas = new Map(dias.map((d) => [d, 0]));
   lista.forEach((e) => { const d = diaDe(e.fecha); if (cuentas.has(d)) cuentas.set(d, cuentas.get(d) + 1); });
   const tope = Math.max.apply(null, Array.from(cuentas.values())) || 1;
@@ -107,7 +127,8 @@ function porDia(lista) {
     return '<button type="button" class="col' + (activo && activo !== d ? ' tenue' : '') + '" data-filtro="dia" data-valor="' + d + '" aria-pressed="' + (activo === d) + '"' +
       ' title="' + esc(FILTROS_TABLERO.dia.nombre(d)) + ': ' + c + '"' + (c ? '' : ' disabled') + '>' +
       '<span style="height:' + (c ? Math.max(6, Math.round(100 * c / tope)) : 0) + '%"></span></button>';
-  }).join('') + '</div><div class="columnas-eje"><span>hace ' + (n - 1) + ' días</span><span>hoy</span></div>';
+  }).join('') + '</div><div class="columnas-eje"><span>' + esc(FILTROS_TABLERO.dia.nombre(dias[0])) + '</span><span>' +
+    esc(TABLERO.periodo === 'rango' ? FILTROS_TABLERO.dia.nombre(dias[dias.length - 1]) : 'hoy') + '</span></div>';
 }
 
 function htmlFiltrosActivos() {
@@ -155,6 +176,8 @@ function pintarTablero() {
   $('#tablero-cuerpo').innerHTML =
     '<div class="tablero-filtros">' + selector('periodo', PERIODOS) +
     selector('quien', [['todas', 'Todo el equipo'], ['mias', 'Solo las mías']]) + '</div>' +
+    (TABLERO.periodo === 'rango' ? htmlRango() : '') +
+    (APP.busqueda ? '<p class="c-nota filtros-ayuda">Mostrando solo lo que coincide con «' + esc(APP.busqueda) + '» (buscador de arriba).</p>' : '') +
     htmlFiltrosActivos() +
     '<div class="cifras">' +
     cifra('Evaluadas', lista.length, '', '') +
@@ -229,7 +252,20 @@ function repintarTableroEnSuSitio() {
   window.scrollTo(0, y);
 }
 
+function htmlRango() {
+  const [a, b] = rangoDeFechas(), hoy = diaDe(new Date());
+  return '<div class="rango-fechas"><label>Desde<input type="date" data-rango="desde" value="' + a + '" max="' + hoy + '"></label>' +
+    '<label>Hasta<input type="date" data-rango="hasta" value="' + b + '" max="' + hoy + '"></label></div>';
+}
+
 function enlazarTablero() {
+  $('#tablero-cuerpo').addEventListener('change', (ev) => {
+    const campo = ev.target.closest('[data-rango]');
+    if (!campo || !campo.value) return;
+    TABLERO[campo.dataset.rango] = campo.value;
+    delete TABLERO.filtros.dia;                 // un día fuera del rango nuevo dejaría el tablero vacío
+    repintarTableroEnSuSitio();
+  });
   $('#tablero-cuerpo').addEventListener('click', (ev) => {
     const t = ev.target.closest('button');
     if (!t) return;

@@ -20,6 +20,7 @@ async function iniciar() {
   iniciarEventosFicha();
   iniciarEventosFirma();
   $('#form-ingreso').addEventListener('submit', ingresar);
+  enlazarBuscador();
   // Una sola vez (antes se agregaban en cada ingreso y se duplicaban).
   window.addEventListener('online', () => sincronizar(true));
   window.addEventListener('offline', pintarConexion);
@@ -46,6 +47,22 @@ async function entrarApp() {
 
   clearInterval(entrarApp._reloj);
   entrarApp._reloj = setInterval(() => { if (navigator.onLine) sincronizar(true); }, CONFIG.MINUTOS_AUTOSYNC * 60000);
+}
+
+/** El buscador filtra la vista que esté abierta; espera a que deje de escribir un momento. */
+function enlazarBuscador() {
+  const campo = $('#buscar'), limpiar = $('#buscar-limpiar');
+  let espera = null;
+  const aplicar = () => {
+    APP.busqueda = campo.value.trim();
+    limpiar.hidden = !campo.value;
+    MAPA.reencuadrar = true;                   // el mapa se acerca a lo encontrado
+    TABLERO.mostrar = 20;
+    pintarInicio();
+  };
+  campo.addEventListener('input', () => { clearTimeout(espera); espera = setTimeout(aplicar, 250); });
+  campo.addEventListener('search', aplicar);   // la X nativa del campo y la tecla Enter
+  limpiar.addEventListener('click', () => { campo.value = ''; aplicar(); campo.focus(); });
 }
 
 /** Borra la base local de la demostración (nunca la real) y la deja como nueva. */

@@ -101,6 +101,9 @@ body.modo-demo, body.entorno-pruebas { --alto-cinta: 22px; padding-top: var(--al
   border-image: linear-gradient(90deg, var(--inst-verde) 0 33%, var(--inst-amarillo) 33% 66%, var(--inst-rojo) 66%) 1;
 }
 .topbar-titulo { flex: 1; min-width: 0; }
+.topbar-logo { flex: none; display: inline-grid; place-items: center; width: 42px; height: 42px; border-radius: 50%;
+  background: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,.35), 0 2px 6px rgba(0,0,0,.25); }
+.topbar-logo img { height: 30px; width: auto; display: block; }
 .topbar-titulo b { display: block; font-size: 1.08rem; }
 .topbar-titulo span { display: block; font-size: .78rem; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .girando .ico { animation: girar 1s linear infinite; }
@@ -151,6 +154,25 @@ body.modo-demo, body.entorno-pruebas { --alto-cinta: 22px; padding-top: var(--al
 .paso-ingreso span { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
   background: var(--azul); color: #fff; font-size: .85rem; flex: none; }
 .pop-btn.btn-secundario { display: inline-flex; justify-content: center; gap: 4px; text-decoration: none; }
+/* Buscador (Visitas, Mapa y Tablero) */
+.buscador { position: relative; max-width: var(--ancho-app); margin: 8px auto 0; padding: 0 16px; display: flex; align-items: center; }
+.buscador > .ico { position: absolute; left: 28px; width: 20px; height: 20px; color: var(--texto-suave); pointer-events: none; }
+.buscador input#buscar { width: 100%; min-height: 44px; padding: 8px 44px 8px 40px; border: 1.5px solid var(--borde); border-radius: 22px;
+  background: #fff; font: inherit; font-size: .95rem; color: var(--texto); }
+.buscador input:focus { outline: none; border-color: var(--azul); box-shadow: 0 0 0 3px var(--azul-claro); }
+.buscador input::-webkit-search-cancel-button { display: none; }
+.buscador .btn-icono { position: absolute; right: 20px; width: 36px; height: 36px; color: var(--texto-suave); background: transparent; }
+.rango-fechas { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.rango-fechas label { display: flex; flex-direction: column; font-size: .82rem; color: var(--texto-suave); font-weight: 600; }
+.rango-fechas input { min-height: 40px; border: 1.5px solid var(--borde); border-radius: 8px; padding: 4px 8px; font: inherit; color: var(--texto); background: #fff; }
+/* Crédito: ingreso y menú */
+.credito { margin: 22px auto 4px; padding-top: 14px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  border-top: 3px solid transparent; border-image: linear-gradient(90deg, var(--inst-verde) 0 33%, var(--inst-amarillo) 33% 66%, var(--inst-rojo) 66%) 1;
+  max-width: 260px; }
+.credito span { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--texto-suave); }
+.credito b { font-size: 1.12rem; font-weight: 800; color: var(--azul); letter-spacing: .01em; }
+.credito em { font-style: normal; font-size: .85rem; font-weight: 600; color: var(--inst-verde); }
+.version-app { text-align: center; font-size: .68rem; color: #9aa8b4; margin: 2px 0 0; }
 .enlace-demo { display: block; text-align: center; margin: 14px 0 0; color: var(--azul); font-weight: 600; font-size: .92rem; }
 .enlace-demo[hidden] { display: none; }
 .cinta-entorno a { color: #fff; text-decoration: underline; }

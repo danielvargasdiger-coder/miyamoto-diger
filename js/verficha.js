@@ -71,13 +71,13 @@
     $('#btn-whatsapp').href = 'https://wa.me/?text=' + encodeURIComponent(mensaje);
     $('#btn-imprimir').onclick = function () { window.print(); };
     $('#btn-copiar').onclick = function () {
-      var hecho = function (ok) { $('#aviso-copia').textContent = ok ? 'Enlace copiado. Ya lo puede pegar en WhatsApp o en un oficio.' : 'Copie el enlace de la barra de direcciones.'; };
+      var hecho = function (ok) { $('#aviso-copia').textContent = ok ? 'Enlace copiado. Ya lo puede pegar en WhatsApp o en un oficio.' : 'Copie el enlace de la barra de direcciones.'; setTimeout(function () { $('#aviso-copia').textContent = ''; }, 4000); };
       if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(enlace).then(function () { hecho(true); }, function () { hecho(false); });
       else hecho(false);
     };
     // En iPhone "Imprimir" a veces no guarda PDF: este botón lo arma el servidor.
     $('#btn-pdf').onclick = function () {
-      var b = $('#btn-pdf'); b.disabled = true; b.textContent = 'Armando PDF…';
+      var b = $('#btn-pdf'), t = b.querySelector('span'); b.disabled = true; t.textContent = 'Armando…';
       llamar('pdf_evaluacion').then(function (r) {
         var bin = atob(r.base64), bytes = new Uint8Array(bin.length);
         for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -85,7 +85,7 @@
         var a = document.createElement('a'); a.href = url; a.download = r.nombre; document.body.appendChild(a); a.click(); a.remove();
         setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
       }).catch(function (e) { alert('No se pudo armar el PDF: ' + e.message); })
-        .then(function () { b.disabled = false; b.textContent = 'Descargar PDF'; });
+        .then(function () { b.disabled = false; t.textContent = 'PDF'; });
     };
     $('#barra').hidden = false;
   }

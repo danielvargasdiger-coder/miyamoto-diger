@@ -28,9 +28,9 @@ function pintarInstalarIngreso() {
   const boton = $('#btn-instalar-ingreso'), ayuda = $('#instalar-ingreso-ayuda');
   if (!boton) return;
   if (yaEstaInstalada()) { boton.hidden = true; ayuda.hidden = true; return; }
+  // Sin el texto de ayuda en el ingreso (pedido del 19/09): solo el botón, cuando el navegador lo ofrece.
   boton.hidden = !invitacionInstalar;
-  ayuda.hidden = !!invitacionInstalar;
-  ayuda.textContent = textoAyudaInstalar();
+  ayuda.hidden = true;
 }
 
 function textoAyudaInstalar() {

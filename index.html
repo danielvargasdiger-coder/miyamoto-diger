@@ -50,6 +50,7 @@
         <button type="button" id="btn-instalar-ingreso" class="btn-secundario" hidden>Instalar la app en este celular</button>
         <p id="instalar-ingreso-ayuda" class="c-nota" hidden></p>
       </div>
+      <p class="credito"><span>Desarrollado por</span><b>Daniel Vargas</b><em>Geólogo</em></p>
     </div>
   </section>
 
@@ -59,9 +60,10 @@
       <button type="button" id="btn-menu" class="btn-icono" aria-label="Menú y mis datos">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
+      <span class="topbar-logo"><img src="img/logo-diger.png" alt="DIGER Pereira"></span>
       <div class="topbar-titulo">
         <b>Evaluación de daños</b>
-        <span>DIGER Pereira · formato Miyamoto</span>
+        <span>DIGER · Alcaldía de Pereira</span>
       </div>
       <nav class="topbar-vistas" aria-label="Vistas">
         <button type="button" class="btn-vista" data-vista="lista">
@@ -79,11 +81,18 @@
       </button>
     </header>
     <div id="estado-conexion" class="estado-conexion"></div>
+    <div class="buscador" role="search">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+      <input type="search" id="buscar" placeholder="Buscar dirección, barrio, No. de ficha o persona" enterkeyhint="search" autocomplete="off" aria-label="Buscar">
+      <button type="button" id="buscar-limpiar" class="btn-icono" aria-label="Borrar la búsqueda" hidden>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
     <div id="panel-lista">
     <nav class="pestanas" role="tablist">
       <button type="button" role="tab" class="pestana" data-pestana="porEvaluar">Por evaluar <span class="cuenta">0</span></button>
-      <button type="button" role="tab" class="pestana" data-pestana="borradores">Borradores <span class="cuenta">0</span></button>
       <button type="button" role="tab" class="pestana" data-pestana="enviadas">Enviadas <span class="cuenta">0</span></button>
+      <button type="button" role="tab" class="pestana" data-pestana="borradores">Borradores <span class="cuenta">0</span></button>
     </nav>
     <main id="lista" class="lista"></main>
     </div>
@@ -195,7 +204,8 @@
         <p id="instalar-ayuda" class="c-nota" hidden></p>
       </section>
       <button type="button" id="menu-salir" class="btn-texto peligro">Salir de este celular</button>
-      <p id="menu-version" class="c-nota centro"></p>
+      <p class="credito"><span>Desarrollado por</span><b>Daniel Vargas</b><em>Geólogo</em></p>
+      <p id="menu-version" class="version-app"></p>
     </div>
   </section>
 

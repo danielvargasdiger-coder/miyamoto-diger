@@ -16,7 +16,7 @@
  */
 const ENTORNO = self.location.pathname.indexOf('/pruebas/') !== -1 ? 'pruebas' : 'prod';
 const PREFIJO = 'miyamoto-' + ENTORNO;
-const VERSION = PREFIJO + '-v13';
+const VERSION = PREFIJO + '-v15';
 
 /**
  * Cuadritos del mapa ya vistos. NO lleva el número de versión: borrarlos en
@@ -57,6 +57,7 @@ const ARCHIVOS = [
   './img/icon-192.png',
   './img/icon-512.png',
   './img/logo-app.png',
+  './img/logo-diger.png',
   './img/logo-sngrd.png',
   './img/logo-usaid-miyamoto.png',
   './img/logos-pie.png'

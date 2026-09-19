@@ -1,0 +1,16 @@
+{
+  "name": "Evaluación de daños · DIGER Pereira",
+  "short_name": "Daños DIGER",
+  "description": "Evaluación rápida de daños en edificaciones con el formulario regional (Miyamoto).",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f7f9",
+  "theme_color": "#0b4f6c",
+  "lang": "es-CO",
+  "icons": [
+    { "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

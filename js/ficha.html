@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b4f6c">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="robots" content="noindex">
+  <title>Ficha · Evaluación de daños DIGER</title>
+  <link rel="icon" href="img/icon-192.png">
+  <style>
+    /* Barra de la página de la ficha. La ficha trae su propio estilo (Ficha.html). */
+    [hidden] { display: none !important; }
+    body { margin: 0; background: #eef1f4; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    /* Celular: título arriba y los 4 botones en una sola fila pareja (antes se
+       amontonaban en 3 filas de distinto ancho). PC: todo en una fila. */
+    .barra-ficha {
+      position: sticky; top: 0; z-index: 10; background: linear-gradient(135deg, #0b4f6c, #063a50); color: #fff;
+      padding: 8px 10px 10px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; align-items: stretch;
+      border-bottom: 3px solid transparent; border-image: linear-gradient(90deg, #3f8c54 0 33%, #f4bc42 33% 66%, #d93933 66%) 1;
+    }
+    .barra-ficha b { grid-column: 1 / -1; text-align: center; font-size: .95rem; padding: 2px 0 4px; }
+    .barra-ficha button, .barra-ficha a {
+      font: inherit; font-weight: 600; font-size: .78rem; line-height: 1.15; border: 1.5px solid rgba(255,255,255,.55); background: rgba(255,255,255,.12);
+      color: #fff; border-radius: 10px; padding: 6px 4px; cursor: pointer; text-decoration: none; min-height: 48px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-align: center;
+    }
+    .barra-ficha svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    @media (min-width: 700px) {
+      .barra-ficha { display: flex; flex-wrap: wrap; justify-content: center; padding: 10px 12px; }
+      .barra-ficha b { flex: 1 1 100%; }
+      .barra-ficha button, .barra-ficha a { flex-direction: row; font-size: .9rem; padding: 8px 14px; min-height: 42px; gap: 6px; }
+    }
+    .barra-ficha .principal { background: #fff; color: #0b4f6c; border-color: #fff; }
+    .barra-ficha button:disabled { opacity: .6; cursor: wait; }
+    .estado { max-width: 740px; margin: 40px auto; padding: 20px; background: #fff; border-radius: 12px; text-align: center; color: #16202a; }
+    .estado.error { border-left: 6px solid #c62828; }
+    .girador { width: 36px; height: 36px; margin: 0 auto 12px; border-radius: 50%; border: 4px solid #cdd8e0; border-top-color: #0b4f6c; animation: g .8s linear infinite; }
+    @keyframes g { to { transform: rotate(360deg); } }
+    #aviso-copia { grid-column: 1 / -1; flex: 1 1 100%; text-align: center; font-size: .85rem; margin: 0; }
+    #aviso-copia:empty { display: none; }
+    @media print { .barra-ficha { display: none; } body { background: #fff; } }
+  </style>
+</head>
+<body>
+  <div class="barra-ficha" id="barra" hidden>
+    <b id="titulo-ficha">Ficha</b>
+    <button type="button" class="principal" id="btn-imprimir"><svg viewBox="0 0 24 24"><path d="M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></svg>Imprimir</button>
+    <button type="button" id="btn-pdf"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg><span>PDF</span></button>
+    <button type="button" id="btn-copiar"><svg viewBox="0 0 24 24"><path d="M9 9h10v10H9zM5 15V5h10"/></svg><span>Copiar enlace</span></button>
+    <a id="btn-whatsapp" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M4 20l1.4-4A8 8 0 1 1 8 18.6z"/></svg>WhatsApp</a>
+    <p id="aviso-copia"></p>
+  </div>
+  <div id="contenido"><div class="estado"><div class="girador"></div>Cargando la ficha…</div></div>
+
+  <script src="config.js"></script>
+  <script src="js/esquema.js"></script>
+  <script src="js/ficha.js"></script>
+  <script src="js/verficha.js"></script>
+</body>
+</html>

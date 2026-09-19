@@ -1,0 +1,72 @@
+/**
+ * CONFIGURACIÓN DE LA APP — Evaluación de daños (formato Miyamoto) · DIGER Pereira
+ * ================================================================================
+ *
+ * UN solo archivo para producción Y pruebas. La app decide sola cuál usar
+ * mirando su propia dirección:
+ *   .../miyamoto-diger/           -> produccion
+ *   .../miyamoto-diger/pruebas/   -> pruebas
+ *   localhost / 127.0.0.1         -> pruebas
+ *
+ * Por qué: en taludes había un config.js por entorno y un día se subieron
+ * los de pruebas a la raíz; producción quedó hablándole al servidor de
+ * pruebas. Con un solo archivo, copiar la carpeta entera a /pruebas/ es
+ * seguro: no hay nada que cambiar ni que se pueda cruzar.
+ *
+ * Si API_URL está vacío, la app funciona en MODO DEMOSTRACIÓN: se puede
+ * llenar todo, ver la ficha y "enviar", pero nada sale del celular.
+ * Con ?demo=1 en la dirección (enlace en la pantalla de ingreso) también,
+ * y viene llena de datos de ejemplo (js/demo.js) para mostrar la app. Usa
+ * su propia base local ('miyamoto-demo'): no se cruza con la real.
+ */
+var CONFIG = (function () {
+  var SERVIDORES = {
+    // Pegar aquí la URL /exec de cada implementación de Apps Script.
+    produccion: 'https://script.google.com/macros/s/AKfycbzUkYVX6Otl421kpg6raRmfCb1efuJti3OHIRX8kP4ObvVF6uoF7lhOVXrvjqrUOGU/exec',
+    pruebas: ''
+  };
+
+  var ruta = (self.location && self.location.pathname) || '';
+  var host = (self.location && self.location.hostname) || '';
+  var local = host === 'localhost' || host === '127.0.0.1';
+  var demoPedido = /[?&]demo(=|&|$)/.test((self.location && self.location.search) || '');
+  var entorno = demoPedido ? 'demo' : ((ruta.indexOf('/pruebas/') !== -1 || local) ? 'pruebas' : 'produccion');
+  var api = demoPedido ? '' : SERVIDORES[entorno];
+
+  return {
+    ENTORNO: entorno,
+    API_URL: api,
+    DEMO: !api,
+    /** Demostración con datos de ejemplo (entró por ?demo=1). */
+    DEMO_CON_DATOS: demoPedido,
+
+    /**
+     * Servidor del que la página ficha.html lee las fichas compartidas.
+     * Un enlace de ficha siempre es de producción, aunque se abra desde
+     * otra dirección (en pruebas o en el computador no hay otro servidor).
+     */
+    URL_SERVIDOR_FICHAS: api || SERVIDORES.produccion,
+
+    /** Nombre corto de la app y de la entidad que la usa. */
+    NOMBRE_APP: 'Evaluación de daños',
+    ENTIDAD: 'DIGER Pereira',
+
+    /** Lo que sale en la sección 16 de la ficha. Fijo: no se le pregunta al ingeniero. */
+    ENTIDAD_FICHA: 'Alcaldía de Pereira',
+    DEPENDENCIA: 'DIGER',
+
+    /** Dirección pública para compartir (y para el QR, cuando se haga). */
+    URL_PUBLICA: 'https://danielvargasdiger-coder.github.io/miyamoto-diger/',
+
+    /** Fotos: mismo punto medido en taludes (1200 px / 0.60 ~ 237 KB por foto). */
+    ANCHO_MAX_FOTO: 1200,
+    CALIDAD_FOTO: 0.60,
+
+    MINUTOS_AUTOSYNC: 10,
+    MINUTOS_BUSCAR_ACTUALIZACION: 15,
+
+    /** GPS: igual que taludes — escucha y se queda con la mejor lectura. */
+    GPS_PRECISION_OBJETIVO: 8,
+    GPS_SEGUNDOS_MAX: 20
+  };
+})();

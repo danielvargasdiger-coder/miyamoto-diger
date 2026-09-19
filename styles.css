@@ -136,6 +136,11 @@ body.modo-demo, body.entorno-pruebas { --alto-cinta: 22px; padding-top: var(--al
 .asignada { display: inline-flex; align-items: center; gap: 3px; font-size: .74rem; font-weight: 700; padding: 2px 8px 2px 5px;
   border-radius: 999px; background: #e1eef6; color: var(--azul); }
 .asignada .ico { width: 14px; height: 14px; }
+.selector-sol { grid-column: 1 / -1; }
+.selector-sol .chip { min-height: 38px; }
+.selector-sol .chip[aria-checked="true"] .cuenta { background: rgba(255,255,255,.22); }
+.sin-asignar { font-size: .74rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #eceff1; color: var(--texto-suave); }
+.lista .vacio { grid-column: 1 / -1; }
 .enlace-demo { display: block; text-align: center; margin: 14px 0 0; color: var(--azul); font-weight: 600; font-size: .92rem; }
 .enlace-demo[hidden] { display: none; }
 .cinta-entorno a { color: #fff; text-decoration: underline; }
@@ -423,6 +428,33 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .columnas { display: flex; align-items: flex-end; gap: 2px; height: 110px; border-bottom: 1px solid var(--borde); }
 .columnas .col { flex: 1; height: 100%; display: flex; align-items: flex-end; }
 .columnas .col span { width: 100%; background: var(--azul); border-radius: 2px 2px 0 0; }
+/* Tablero dinámico: barras, días y cifras se tocan para filtrar. */
+button.barra-fila { width: 100%; background: none; border: 0; padding: 4px 6px; margin: 0 -6px; width: calc(100% + 12px);
+  border-radius: 6px; font: inherit; color: inherit; text-align: left; cursor: pointer; min-height: 32px; }
+button.barra-fila:hover { background: #f1f5f8; }
+button.barra-fila[aria-pressed="true"] { background: #e1eef6; box-shadow: inset 3px 0 0 var(--azul); font-weight: 700; }
+.tenue { opacity: .38; }
+.tenue:hover { opacity: .75; }
+button.col { border: 0; padding: 0; background: none; cursor: pointer; border-radius: 2px 2px 0 0; }
+button.col:hover span { background: var(--azul-oscuro); }
+button.col:disabled { cursor: default; }
+button.col[aria-pressed="true"] span { background: var(--inst-verde); }
+button.cifra { font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; }
+button.cifra:hover { box-shadow: var(--sombra); }
+.cifra.marcada { background: #f3f8fb; outline: 2px solid var(--azul); outline-offset: -2px; }
+.filtros-activos { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.filtros-ayuda { margin: -4px 0 0; }
+.chip-filtro { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 4px 8px 4px 12px; border-radius: 999px;
+  border: 1.5px solid var(--azul); background: #e1eef6; color: var(--azul); font: inherit; font-size: .88rem; cursor: pointer; max-width: 100%; }
+.chip-filtro span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip-filtro .ico { width: 16px; height: 16px; flex: none; }
+.lista-tablero { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 0; }
+.fila-eval { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--borde); min-width: 0; }
+.fila-eval .clasif { flex: none; }
+.fila-eval-txt { flex: 1; min-width: 0; display: grid; }
+.fila-eval-txt b, .fila-eval-txt span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fila-eval-txt span { font-size: .82rem; color: var(--texto-suave); }
+.fila-eval .btn-texto { flex: none; }
 .columnas-eje { display: flex; justify-content: space-between; font-size: .78rem; color: var(--texto-suave); margin-top: 4px; }
 
 /* isolation: Leaflet pone sus capas con z-index 400-1000. Sin encerrarlas,

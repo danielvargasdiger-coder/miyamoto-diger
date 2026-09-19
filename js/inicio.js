@@ -12,12 +12,42 @@ async function recargarLocales() {
 }
 
 /** Solicitudes que todavía nadie evaluó (ni en el servidor, ni en cola, ni empezadas aquí). */
-function solicitudesPendientes() {
+function solicitudesSinEvaluar() {
   const hechas = new Set();
   APP.historial.forEach((h) => h.id_solicitud && hechas.add(h.id_solicitud));
   (APP.enviadasLocal || []).forEach((h) => h.id_solicitud && hechas.add(h.id_solicitud));
   APP.cola.forEach((c) => c.datos.id_solicitud && hechas.add(c.datos.id_solicitud));
   return APP.solicitudes.filter((s) => !hechas.has(s.id_solicitud));
+}
+
+/**
+ * Por defecto solo las asignadas a esta persona (pedido del 18/09); con
+ * "Todas" también las que no tienen a nadie asignado. Si el servidor todavía
+ * no marca las asignadas (versión vieja, sin para_mi), se muestran todas: si
+ * no, la lista quedaría vacía.
+ */
+function servidorMarcaAsignadas() { return APP.solicitudes.some((s) => 'para_mi' in s); }
+function verTodasLasSolicitudes() { return APP.verSolicitudes === 'todas' || !servidorMarcaAsignadas(); }
+
+function solicitudesPendientes() {
+  const lista = solicitudesSinEvaluar();
+  return verTodasLasSolicitudes() ? lista : lista.filter((s) => s.para_mi);
+}
+
+async function cambiarVerSolicitudes(valor) {
+  APP.verSolicitudes = valor === 'todas' ? 'todas' : 'mias';
+  await DB.guardarKV('verSolicitudes', APP.verSolicitudes);
+  pintarInicio();
+}
+
+function htmlSelectorSolicitudes() {
+  if (!servidorMarcaAsignadas()) return '';
+  const todas = solicitudesSinEvaluar();
+  const mias = todas.filter((s) => s.para_mi).length;
+  const ver = verTodasLasSolicitudes() ? 'todas' : 'mias';
+  const chip = (k, t, n) => '<button type="button" class="chip" data-ver-sol="' + k + '" aria-checked="' + (ver === k) + '">' + t + ' <span class="cuenta">' + n + '</span></button>';
+  return '<div class="selector-sol chips" role="group" aria-label="Qué visitas ver">' +
+    chip('mias', 'Asignadas a mí', mias) + chip('todas', 'Todas', todas.length) + '</div>';
 }
 
 function borradorDeSolicitud(idSol) {
@@ -61,17 +91,23 @@ function vacioHtml(titulo, texto) {
 }
 
 function htmlPorEvaluar(pend) {
+  const selector = htmlSelectorSolicitudes();
   if (!pend.length) {
-    return vacioHtml('No hay solicitudes pendientes',
-      'Aquí aparecen las visitas que la DIGER le asigne a usted y las que no tienen a nadie asignado. Para evaluar una edificación que no está en la lista, toque el botón +.');
+    const sinAsignar = solicitudesSinEvaluar().length;
+    if (!verTodasLasSolicitudes() && sinAsignar) {
+      return selector + vacioHtml('No tiene visitas asignadas',
+        'Hay ' + sinAsignar + (sinAsignar === 1 ? ' visita sin asignar' : ' visitas sin asignar') + ': toque «Todas» para verlas. Para evaluar una edificación que no está en la lista, toque el botón +.');
+    }
+    return selector + vacioHtml('No hay solicitudes pendientes',
+      'Aquí aparecen las visitas que la DIGER le asigne. Para evaluar una edificación que no está en la lista, toque el botón +.');
   }
   const orden = { 'ALTA': 0, 'MEDIA': 1, 'BAJA': 2 };
-  pend = pend.slice().sort((a, b) => (orden[a.prioridad] ?? 3) - (orden[b.prioridad] ?? 3));
-  return pend.map((s) => {
+  pend = pend.slice().sort((a, b) => (b.para_mi ? 1 : 0) - (a.para_mi ? 1 : 0) || (orden[a.prioridad] ?? 3) - (orden[b.prioridad] ?? 3));
+  return selector + pend.map((s) => {
     const b = borradorDeSolicitud(s.id_solicitud);
     return '<article class="tarjeta">' +
       '<div class="t-cab"><span class="t-etiquetas"><span class="prioridad p-' + esc((s.prioridad || '').toLowerCase()) + '">' + esc(s.prioridad || 'Sin prioridad') + '</span>' +
-      (s.para_mi ? '<span class="asignada">' + icono('check') + 'Asignada a usted</span>' : '') + '</span>' +
+      (s.para_mi ? '<span class="asignada">' + icono('check') + 'Asignada a usted</span>' : (servidorMarcaAsignadas() ? '<span class="sin-asignar">Sin asignar</span>' : '')) + '</span>' +
       '<span class="t-id">' + esc(s.id_solicitud) + '</span></div>' +
       '<h3>' + esc(s.direccion || 'Sin dirección') + '</h3>' +
       '<p class="t-lugar">' + esc([s.barrio, s.municipio].filter(Boolean).join(' · ')) + '</p>' +
@@ -139,6 +175,7 @@ function enlazarInicio() {
   $('#lista').addEventListener('click', async (ev) => {
     const t = ev.target.closest('button');
     if (!t) return;
+    if (t.dataset.verSol) { cambiarVerSolicitudes(t.dataset.verSol); return; }
     if (t.dataset.evaluar) {
       const s = APP.solicitudes.find((x) => x.id_solicitud === t.dataset.evaluar);
       abrirEvaluacion({ solicitud: s });

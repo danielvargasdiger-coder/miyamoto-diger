@@ -100,11 +100,14 @@ async function enviarUna(item) {
   await DB.guardar('cola', item);
 
   let n = 0;
+  const perdidas = [];
   for (const f of item.fotos) {
     n++;
     if (yaEstan.has(f.nombre)) continue;
     const reg = await DB.leer('fotos', f.clave);
-    if (!reg) continue;                              // se borró del celular: no hay nada que subir
+    // Se borró del celular (el sistema liberó espacio): no hay nada que subir.
+    // No se sigue esperando: si no, la evaluación quedaba en cola para siempre.
+    if (!reg) { perdidas.push(f.nombre); continue; }
     item.error = 'Subiendo foto ' + n + ' de ' + item.fotos.length + '…';
     pintarInicio();
     await api('subir_foto', {
@@ -115,7 +118,8 @@ async function enviarUna(item) {
     await DB.guardar('cola', item);
   }
 
-  const cierre = await api('cerrar_evaluacion', { id: item.id, fotos: item.fotos.map((f) => f.nombre) });
+  if (perdidas.length) console.warn('Fotos que ya no estaban en el celular:', item.id, perdidas);
+  const cierre = await api('cerrar_evaluacion', { id: item.id, fotos: item.fotos.map((f) => f.nombre).filter((x) => perdidas.indexOf(x) === -1) });
   if (cierre.faltan && cierre.faltan.length) {
     // El servidor no tiene todas: se queda en cola y el próximo intento
     // sube solo las que faltan (guardar_evaluacion dice cuáles ya están).

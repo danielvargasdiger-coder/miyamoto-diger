@@ -41,7 +41,8 @@ function htmlPopup(p) {
     const s = p.s;
     return '<b>' + esc(s.direccion || 'Sin dirección') + '</b><br>' + esc([s.barrio, s.prioridad].filter(Boolean).join(' · ')) +
       (s.descripcion ? '<br><span class="pop-desc">' + esc(s.descripcion) + '</span>' : '') +
-      '<br><button type="button" class="btn-principal btn-chico pop-btn" data-evaluar="' + esc(s.id_solicitud) + '">Evaluar</button>';
+      '<br><button type="button" class="btn-principal btn-chico pop-btn" data-evaluar="' + esc(s.id_solicitud) + '">Evaluar</button>' +
+      '<a class="btn-secundario btn-chico pop-btn" target="_blank" rel="noopener" href="' + esc(urlComoLlegar(s)) + '">' + icono('ruta') + 'Cómo llegar</a>';
   }
   const h = p.h;
   return '<b>' + esc(h.direccion || 'Sin dirección') + '</b><br>' + chipClasif(h.clasif) + ' ' + esc(h.num_formulario || '') +
@@ -74,7 +75,10 @@ async function abrirMapa() {
 function ajustarAltoMapa() {
   const el = $('#mapa');
   const arriba = el.getBoundingClientRect().top + window.scrollY;
-  el.style.height = Math.max(280, window.innerHeight - arriba) + 'px';
+  // En el celular la barra de Visitas / Mapa / Tablero va abajo, encima del mapa.
+  const nav = $('.topbar-vistas');
+  const abajo = nav && getComputedStyle(nav).position === 'fixed' ? nav.offsetHeight : 0;
+  el.style.height = Math.max(280, window.innerHeight - arriba - abajo) + 'px';
 }
 
 function pintarMapa() {
@@ -110,6 +114,9 @@ function pintarMapa() {
   }
   MAPA.reencuadrar = false;
   $('#mapa-vacio').hidden = visibles.length > 0;
+  // La leyenda y los filtros recién dibujados cambian dónde empieza el mapa:
+  // se vuelve a medir para que el borde de abajo no quede bajo la barra inferior.
+  if (APP.vista === 'mapa') { ajustarAltoMapa(); MAPA.mapa.invalidateSize(); }
 }
 
 function centrarEnMi() {

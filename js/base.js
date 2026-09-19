@@ -4,7 +4,7 @@
    ========================================================================= */
 'use strict';
 
-const VERSION_APP = 'miyamoto-12';     // subirla junto con VERSION en sw.js
+const VERSION_APP = 'miyamoto-13';     // subirla junto con VERSION en sw.js
 
 const APP = {
   perfil: null,          // { codigo, entidad, nombre, tipo_doc, num_doc, id_evaluador, matricula, dependencia }
@@ -96,7 +96,8 @@ const ICONOS = {
   enviar: '<path d="M4 12l16-8-6 16-3-7-7-1z"/>',
   edificio: '<path d="M5 21V4h10v17M15 9h4v12M3 21h18"/><path d="M8 7h1M11 7h1M8 10.5h1M11 10.5h1M8 14h1M11 14h1"/>',
   salir: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/>',
-  descargar: '<path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/>'
+  descargar: '<path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/>',
+  ruta: '<path d="M3 11l18-8-8 18-2-8-8-2z"/>'
 };
 
 function icono(nombre) {
@@ -236,8 +237,8 @@ async function apiDemo(accion, p) {
     }
     case 'guardar_evaluacion': {
       let ev = s.evaluaciones[p.id];
-      // Con datos de ejemplo, el consecutivo sigue después de los de ejemplo (DEMO-…-0043).
-      if (!ev) { s.n = Math.max(s.n, CONFIG.DEMO_CON_DATOS ? Demo.N_EVALUACIONES : 0) + 1; ev = { id: p.id, num_formulario: 'DEMO-' + new Date().getFullYear() + '-' + String(s.n).padStart(4, '0'), fotos: [] }; }
+      // Aleatorio, como en el servidor.
+      if (!ev) { s.n++; ev = { id: p.id, num_formulario: Demo.numeroDemo(), fotos: [] }; }
       Object.assign(ev, resumenDeDatos(p.datos), { id: p.id, fotos: ev.fotos, datos: p.datos, fotosData: ev.fotosData || {} });
       s.evaluaciones[p.id] = ev;
       await DB.guardarKV('demo-servidor', s);
@@ -263,6 +264,16 @@ async function apiDemo(accion, p) {
     default:
       throw new Error('Acción no disponible en demostración: ' + accion);
   }
+}
+
+/**
+ * "Cómo llegar": abre Google Maps (o la app de mapas) con la ruta. Con
+ * coordenadas va al punto exacto; si no, busca la dirección.
+ */
+function urlComoLlegar(s) {
+  const destino = Esquema.coordenadaValida(s.lat, s.lon) ? s.lat + ',' + s.lon
+    : [s.direccion, s.barrio, s.municipio || 'Pereira', 'Risaralda'].filter(Boolean).join(', ');
+  return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(destino);
 }
 
 /** Quién es, para el registro de TECNICOS y para recibir solo sus visitas asignadas. */

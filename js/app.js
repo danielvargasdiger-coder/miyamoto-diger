@@ -20,6 +20,9 @@ async function iniciar() {
   iniciarEventosFicha();
   iniciarEventosFirma();
   $('#form-ingreso').addEventListener('submit', ingresar);
+  // Una sola vez (antes se agregaban en cada ingreso y se duplicaban).
+  window.addEventListener('online', () => sincronizar(true));
+  window.addEventListener('offline', pintarConexion);
   registrarSW();
 
   // Que el navegador no borre la base local cuando se llene el celular.
@@ -44,8 +47,6 @@ async function entrarApp() {
 
   clearInterval(entrarApp._reloj);
   entrarApp._reloj = setInterval(() => { if (navigator.onLine) sincronizar(true); }, CONFIG.MINUTOS_AUTOSYNC * 60000);
-  window.addEventListener('online', () => sincronizar(true));
-  window.addEventListener('offline', pintarConexion);
 }
 
 /** Borra la base local de la demostración (nunca la real) y la deja como nueva. */
@@ -67,8 +68,13 @@ async function reiniciarDemostracion() {
 function registrarSW() {
   if (!('serviceWorker' in navigator)) return;
   let recargando = false;
+  // Solo se recarga cuando CAMBIA la versión. En el primer uso el service
+  // worker también "toma el control" a los pocos segundos, y recargar ahí
+  // borraba lo que el técnico nuevo estaba escribiendo en el ingreso
+  // (código, datos y firma). Encontrado en la auditoría del 18/09.
+  const habiaVersion = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (recargando) return;
+    if (recargando || !habiaVersion) return;
     recargando = true;
     location.reload();
   });

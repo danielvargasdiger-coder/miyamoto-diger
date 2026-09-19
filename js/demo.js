@@ -82,6 +82,14 @@ var Demo = (function () {
 
   function pad(n, k) { return ('0000' + n).slice(-(k || 4)); }
 
+  /** Como el del servidor, aleatorio: DEMO-K7F3-9QXM. */
+  var LETRAS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  function numeroDemo(r) {
+    var s = '';
+    for (var k = 0; k < 8; k++) s += LETRAS.charAt(Math.floor(r() * LETRAS.length));
+    return 'DEMO-' + s.slice(0, 4) + '-' + s.slice(4);
+  }
+
   function fechaLocal(d) {
     return d.getFullYear() + '-' + pad(d.getMonth() + 1, 2) + '-' + pad(d.getDate(), 2) + 'T' + pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2);
   }
@@ -107,7 +115,7 @@ var Demo = (function () {
     var pisos = uno([1, 1, 2, 2, 2, 3, 3, 4, 5]);
 
     var d = {
-      num_formulario: 'DEMO-' + cuando.getFullYear() + '-' + pad(i + 1),
+      num_formulario: numeroDemo(r),
       fecha_hora_inspeccion: fechaLocal(cuando),
       tipo_inspeccion: r() < 0.8 ? 'completa' : 'exterior', tipo_amenaza: 'sismo',
       persona_contacto: uno(CONTACTOS), num_contacto: '3' + String(Math.floor(100000000 + r() * 899999999)),
@@ -321,7 +329,8 @@ var Demo = (function () {
   return {
     PERFIL: PERFIL, N_EVALUACIONES: N_EVALUACIONES,
     datosDeEvaluacion: datosDeEvaluacion, idDeEvaluacion: idDeEvaluacion, evaluaciones: evaluaciones, datosDe: datosDe,
-    resumen: resumen, solicitudes: solicitudes, fotosDe: fotosDe, firma: firma
+    resumen: resumen, solicitudes: solicitudes, fotosDe: fotosDe, firma: firma,
+    numeroDemo: function () { return numeroDemo(Math.random); }
   };
 })();
 

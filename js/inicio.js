@@ -46,7 +46,7 @@ function htmlSelectorSolicitudes() {
   const mias = todas.filter((s) => s.para_mi).length;
   const ver = verTodasLasSolicitudes() ? 'todas' : 'mias';
   const chip = (k, t, n) => '<button type="button" class="chip" data-ver-sol="' + k + '" aria-checked="' + (ver === k) + '">' + t + ' <span class="cuenta">' + n + '</span></button>';
-  return '<div class="selector-sol chips" role="group" aria-label="Qué visitas ver">' +
+  return '<div class="selector-sol" role="group" aria-label="Qué visitas ver"><span class="selector-et">Mostrar:</span>' +
     chip('mias', 'Asignadas a mí', mias) + chip('todas', 'Todas', todas.length) + '</div>';
 }
 
@@ -112,8 +112,10 @@ function htmlPorEvaluar(pend) {
       '<h3>' + esc(s.direccion || 'Sin dirección') + '</h3>' +
       '<p class="t-lugar">' + esc([s.barrio, s.municipio].filter(Boolean).join(' · ')) + '</p>' +
       (s.descripcion ? '<p class="t-desc">' + esc(s.descripcion) + '</p>' : '') +
-      '<div class="t-pie">' +
-      (s.telefono ? '<a class="btn-texto" href="tel:' + esc(String(s.telefono).replace(/\s/g, '')) + '">' + icono('telefono') + esc(s.contacto || s.telefono) + '</a>' : '<span></span>') +
+      '<div class="t-pie"><span class="t-enlaces">' +
+      (s.telefono ? '<a class="btn-texto" href="tel:' + esc(String(s.telefono).replace(/\s/g, '')) + '">' + icono('telefono') + esc(s.contacto || s.telefono) + '</a>' : '') +
+      ((s.direccion || Esquema.coordenadaValida(s.lat, s.lon)) ? '<a class="btn-texto" target="_blank" rel="noopener" href="' + esc(urlComoLlegar(s)) + '">' + icono('ruta') + 'Cómo llegar</a>' : '') +
+      '</span>' +
       (b ? '<button type="button" class="btn-principal btn-chico" data-continuar="' + esc(b.id) + '">' + icono('lapiz') + 'Continuar</button>'
         : '<button type="button" class="btn-principal btn-chico" data-evaluar="' + esc(s.id_solicitud) + '">Evaluar' + icono('derecha') + '</button>') +
       '</div></article>';

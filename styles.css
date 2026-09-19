@@ -53,6 +53,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .btn-principal { background: var(--azul); color: #fff; }
 .btn-principal:disabled { background: #9fb3bf; cursor: not-allowed; }
+.btn-secundario:disabled { opacity: .4; cursor: not-allowed; }
 .btn-secundario { background: #fff; color: var(--azul); border-color: var(--azul); }
 .btn-peligro { background: var(--error); color: #fff; }
 .btn-claro { background: rgba(255,255,255,.16); color: #fff; border-color: rgba(255,255,255,.5); min-height: 40px; padding: 6px 14px; }
@@ -137,11 +138,19 @@ body.modo-demo, body.entorno-pruebas { --alto-cinta: 22px; padding-top: var(--al
   border-radius: 999px; background: #e1eef6; color: var(--azul); }
 .asignada .ico { width: 14px; height: 14px; }
 .mapa-sin-ubicacion { font-weight: 600; color: #8a4b00; }
-.selector-sol { grid-column: 1 / -1; }
-.selector-sol .chip { min-height: 38px; }
+.selector-sol { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: .88rem; }
+.selector-et { color: var(--texto-suave); }
+.selector-sol .chip { min-height: 34px; padding: 3px 12px; font-size: .86rem; }
 .selector-sol .chip[aria-checked="true"] .cuenta { background: rgba(255,255,255,.22); }
 .sin-asignar { font-size: .74rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #eceff1; color: var(--texto-suave); }
 .lista .vacio { grid-column: 1 / -1; }
+.t-pie > .btn-principal { margin-left: auto; }
+.t-enlaces { display: flex; flex-wrap: wrap; gap: 2px 12px; min-width: 0; }
+.paso-ingreso { display: flex; align-items: center; gap: 8px; font-size: 1rem; margin: 18px 0 6px; color: var(--azul); }
+.paso-ingreso:first-child { margin-top: 4px; }
+.paso-ingreso span { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--azul); color: #fff; font-size: .85rem; flex: none; }
+.pop-btn.btn-secundario { display: inline-flex; justify-content: center; gap: 4px; text-decoration: none; }
 .enlace-demo { display: block; text-align: center; margin: 14px 0 0; color: var(--azul); font-weight: 600; font-size: .92rem; }
 .enlace-demo[hidden] { display: none; }
 .cinta-entorno a { color: #fff; text-decoration: underline; }
@@ -386,8 +395,29 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .toast.ok { background: var(--ok); }
 
 /* ------------------------------------------------------------ VISTAS: LISTA / MAPA / TABLERO */
-.topbar-vistas { display: flex; gap: 2px; flex: none; }
-.topbar-vistas [aria-current="page"] { background: #fff; color: var(--azul); }
+/* Visitas / Mapa / Tablero: con nombre (los íconos solos no se entendían).
+   En PC van arriba; en el celular, abajo, al alcance del pulgar. */
+.topbar-vistas { display: flex; gap: 4px; flex: none; }
+.btn-vista {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border: 0; border-radius: 22px;
+  background: transparent; color: #fff; font: inherit; font-weight: 600; font-size: .92rem; cursor: pointer;
+}
+.btn-vista .ico { width: 22px; height: 22px; }
+.btn-vista:hover { background: rgba(255,255,255,.14); }
+.btn-vista[aria-current="page"] { background: #fff; color: var(--azul); }
+.btn-vista:focus-visible { outline: 3px solid var(--inst-amarillo); outline-offset: 2px; }
+@media (max-width: 760px) {
+  .topbar-vistas {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; justify-content: space-around; gap: 0;
+    background: #fff; border-top: 1px solid var(--borde); box-shadow: 0 -2px 10px rgba(16,32,44,.08);
+    padding: 4px max(8px, env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  }
+  .btn-vista { flex: 1; flex-direction: column; gap: 2px; min-height: 54px; padding: 4px 0; border-radius: 12px;
+    color: var(--texto-suave); font-size: .76rem; }
+  .btn-vista:hover { background: var(--azul-claro); }
+  .btn-vista[aria-current="page"] { background: var(--azul-claro); color: var(--azul); }
+  .fab { bottom: calc(80px + env(safe-area-inset-bottom)); }
+}
 
 .mapa-barra { max-width: var(--ancho-app); margin: 0 auto; padding: 10px 16px 6px; display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .mapa-barra .chips { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
@@ -527,4 +557,11 @@ button.cifra:hover { box-shadow: var(--sombra); }
   .topbar-titulo span { display: none; }
   .pestana .cuenta { display: none; }
   .nl { width: 42px; height: 44px; }
+}
+
+/* AL FINAL a propósito: gana sobre los ajustes de celular de más arriba.
+   Deja espacio para la barra inferior (Visitas / Mapa / Tablero) y el botón + Nueva. */
+@media (max-width: 760px) {
+  .lista { padding-bottom: calc(160px + env(safe-area-inset-bottom)); }
+  .tablero { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
 }

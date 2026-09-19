@@ -29,13 +29,16 @@
       <p class="ingreso-sub">Formulario regional (Miyamoto · USAID)</p>
       <p id="modo-demo" class="aviso-suave" hidden>Modo demostración: la app aún no está conectada al servidor. Escriba cualquier código para probarla; nada sale del celular.</p>
       <form id="form-ingreso" autocomplete="off">
-        <label>Código de acceso <span class="req">*</span>
-          <input name="codigo" required autocapitalize="characters" spellcheck="false">
+        <h2 class="paso-ingreso"><span>1</span>Código de acceso</h2>
+        <label>El que le dio la DIGER <span class="req">*</span>
+          <input name="codigo" required autocapitalize="characters" spellcheck="false" placeholder="DIGER-XXXXXX">
         </label>
-        <p class="c-nota">Sus datos se llenan solos en cada evaluación (sección 16). Puede cambiarlos después en el menú.</p>
+        <h2 class="paso-ingreso"><span>2</span>Sus datos</h2>
+        <p class="c-nota">Salen solos en la sección 16 de cada evaluación. Puede cambiarlos después en el menú.</p>
         <div id="ingreso-perfil" class="perfil-campos"></div>
+        <h2 class="paso-ingreso"><span>3</span>Su firma</h2>
         <div class="firma-campo">
-          <span class="c-etiqueta">Firma <span class="req">*</span></span>
+          <span class="c-etiqueta">Firma con el dedo <span class="req">*</span></span>
           <div class="firma-muestra" data-firma-muestra><span class="c-nota">Aún no ha firmado</span></div>
           <button type="button" class="btn-secundario" data-firmar>Firmar</button>
         </div>
@@ -61,14 +64,14 @@
         <span>DIGER Pereira · formato Miyamoto</span>
       </div>
       <nav class="topbar-vistas" aria-label="Vistas">
-        <button type="button" class="btn-icono" data-vista="lista" aria-label="Lista">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
+        <button type="button" class="btn-vista" data-vista="lista">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg><span>Visitas</span>
         </button>
-        <button type="button" class="btn-icono" data-vista="mapa" aria-label="Mapa">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.8-6.5-11a6.5 6.5 0 0 1 13 0c0 5.2-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
+        <button type="button" class="btn-vista" data-vista="mapa">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.8-6.5-11a6.5 6.5 0 0 1 13 0c0 5.2-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg><span>Mapa</span>
         </button>
-        <button type="button" class="btn-icono" data-vista="tablero" aria-label="Tablero">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20v-8M12 20V5M18 20v-5"/></svg>
+        <button type="button" class="btn-vista" data-vista="tablero">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20v-8M12 20V5M18 20v-5"/></svg><span>Tablero</span>
         </button>
       </nav>
       <button type="button" id="btn-sync" class="btn-icono" aria-label="Sincronizar">

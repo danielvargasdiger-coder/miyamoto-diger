@@ -70,7 +70,7 @@ async function abrirEvaluacion(opciones) {
   };
   $('#vista-ficha').hidden = false;
   document.body.classList.add('sin-scroll');
-  $('#ficha-id').textContent = registro.solicitud ? 'Solicitud ' + registro.solicitud.id_solicitud : 'Evaluación nueva';
+  $('#ficha-id').textContent = registro.solicitud ? registro.solicitud.id_solicitud : 'Evaluación nueva';
   precalentarGps();
   irAPaso(APP.actual.paso);
 }
@@ -199,7 +199,8 @@ function actualizarSemaforo() {
   const el = $('#semaforo');
   if (!s.color) {
     el.className = 'semaforo';
-    el.innerHTML = '<span class="punto"></span><span class="larga">Sugerencia: </span>faltan ' + s.faltan.length;
+    // Sin la cuenta: "faltan 17" chocaba con el "Faltan 41 datos" de Revisar (son cosas distintas).
+    el.innerHTML = '<span class="punto"></span>Sin sugerencia';
   } else {
     el.className = 'semaforo ' + s.color;
     el.innerHTML = '<span class="punto"></span>' + NOMBRE_COLOR[s.color];
@@ -220,6 +221,7 @@ function htmlSeccion(sid) {
   const visibles = s.campos.filter((c) => Esquema.visible(c, d));
   if (s.soloLectura) return h + htmlSoloLectura(visibles);
   const esDano = visibles.some((c) => c.tipo === 'nlms');
+  // Sin atajo para "marcar todo N/L": la DIGER pide que cada elemento se revise y marque uno por uno (18/09).
   h += '<div class="campos' + (esDano ? ' campos-dano' : '') + '">' + (esDano ? gruposDano(visibles) : visibles.map(htmlCampo).join('')) + '</div>';
   return h;
 }
@@ -321,7 +323,7 @@ function htmlCampo(c) {
     }
     case 'varias': {
       const sel = Array.isArray(v) ? v : [];
-      return envoltura(cabeceraCampo(c) + '<div class="chips">' + Esquema.opciones(c, d).map((o) =>
+      return envoltura(cabeceraCampo(Object.assign({}, c, { nota: (c.nota ? c.nota + ' · ' : '') + 'puede marcar varias' })) + '<div class="chips">' + Esquema.opciones(c, d).map((o) =>
         '<button type="button" role="checkbox" class="chip" data-varias="' + c.id + '" data-valor="' + o[0] +
         '" aria-checked="' + (sel.indexOf(o[0]) !== -1) + '">' + esc(o[1]) + '</button>').join('') + '</div>');
     }
@@ -337,11 +339,17 @@ function htmlCampo(c) {
     case 'fotos':
       return envoltura(cabeceraCampo(c) + '<div class="fotos" data-fotos="' + c.id + '"></div>' +
         '<div class="fotos-botones">' +
-        '<label class="btn-secundario btn-chico">' + icono('camara') + 'Cámara<input type="file" accept="image/*" capture="environment" data-subir="' + c.id + '" hidden></label>' +
-        '<label class="btn-secundario btn-chico">' + icono('galeria') + 'Galería<input type="file" accept="image/*" multiple data-subir="' + c.id + '" hidden></label>' +
+        '<label class="' + (c.compacto ? 'btn-secundario btn-chico' : 'btn-principal') + '">' + icono('camara') + 'Tomar foto<input type="file" accept="image/*" capture="environment" data-subir="' + c.id + '" hidden></label>' +
+        '<label class="btn-secundario' + (c.compacto ? ' btn-chico' : '') + '">' + icono('galeria') + 'Galería<input type="file" accept="image/*" multiple data-subir="' + c.id + '" hidden></label>' +
         '<span class="c-nota">Máx. ' + c.max + '</span></div>', c.compacto ? ' compacto' : '');
   }
   return '';
+}
+
+/** La solicitud trae coordenadas: sirven si el GPS no alcanza (dentro de una casa, sin cielo). */
+function solicitudConPunto() {
+  const s = APP.actual && APP.actual.solicitud;
+  return !!s && Esquema.coordenadaValida(s.lat, s.lon);
 }
 
 function htmlGps(v) {
@@ -350,11 +358,12 @@ function htmlGps(v) {
   return '<div class="gps">' +
     '<div class="gps-dato ' + calidad + '" id="gps-dato">' + (hay
       ? '<b>' + Number(v.lat).toFixed(6) + ', ' + Number(v.lon).toFixed(6) + '</b><span>' +
-        (v.manual ? 'Escrita a mano' : '±' + v.precision + ' m') + '</span>'
+        (v.origen === 'solicitud' ? 'De la solicitud (no medida en el sitio)' : v.manual ? 'Escrita a mano' : '±' + v.precision + ' m') + '</span>'
       : '<span>Sin ubicación todavía</span>') + '</div>' +
     '<div class="fotos-botones">' +
     '<button type="button" class="btn-principal btn-chico" id="btn-gps">' + icono('ubicacion') + (hay ? 'Volver a medir' : 'Tomar ubicación') + '</button>' +
-    '<button type="button" class="btn-texto btn-chico" id="btn-gps-manual">Escribirla a mano</button></div>' +
+    '<button type="button" class="btn-texto btn-chico" id="btn-gps-manual">Escribirla a mano</button>' +
+    (solicitudConPunto() ? '<button type="button" class="btn-texto btn-chico" id="btn-gps-solicitud">Usar la de la solicitud</button>' : '') + '</div>' +
     '<div class="gps-manual" id="gps-manual" hidden>' +
     '<label>Latitud<input inputmode="decimal" id="gps-lat" placeholder="4.8133"></label>' +
     '<label>Longitud<input inputmode="decimal" id="gps-lon" placeholder="-75.6961"></label>' +
@@ -506,6 +515,8 @@ function enlazarGps(raiz) {
         const ya = $('#gps-ya', raiz); if (ya) ya.onclick = usarLoQueHayaGps;
       },
       listo: (m) => {
+        // Salió de la evaluación (o abrió otra) mientras el GPS buscaba: no se toca nada.
+        if (!APP.actual || APP.actual.datos !== d) return;
         d.ubicacion = { lat: m.lat, lon: m.lon, precision: m.precision };
         if (!Esquema.coordenadaValida(m.lat, m.lon)) toast('Ojo: esa ubicación queda fuera de Risaralda.', 'error');
         cambio(true);
@@ -517,6 +528,12 @@ function enlazarGps(raiz) {
     }, true);
   });
   $('#btn-gps-manual', raiz).addEventListener('click', () => { $('#gps-manual', raiz).hidden = false; });
+  const deSolicitud = $('#btn-gps-solicitud', raiz);
+  if (deSolicitud) deSolicitud.addEventListener('click', () => {
+    const s = APP.actual.solicitud;
+    d.ubicacion = { lat: +s.lat, lon: +s.lon, precision: null, manual: true, origen: 'solicitud' };
+    cambio(true);
+  });
   $('#gps-manual-ok', raiz).addEventListener('click', () => {
     const lat = Esquema.aNumero($('#gps-lat', raiz).value), lon = Esquema.aNumero($('#gps-lon', raiz).value);
     if (!Esquema.coordenadaValida(lat, lon)) { toast('Esa coordenada no queda en Risaralda. Revise el orden y el signo menos.', 'error'); return; }

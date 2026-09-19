@@ -132,6 +132,13 @@ body.modo-demo, body.entorno-pruebas { --alto-cinta: 22px; padding-top: var(--al
 .t-desc { margin: 6px 0 0; font-size: .9rem; }
 .t-pie { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 .prioridad { font-size: .74rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #eceff1; color: var(--texto-suave); }
+.t-etiquetas { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.asignada { display: inline-flex; align-items: center; gap: 3px; font-size: .74rem; font-weight: 700; padding: 2px 8px 2px 5px;
+  border-radius: 999px; background: #e1eef6; color: var(--azul); }
+.asignada .ico { width: 14px; height: 14px; }
+.enlace-demo { display: block; text-align: center; margin: 14px 0 0; color: var(--azul); font-weight: 600; font-size: .92rem; }
+.enlace-demo[hidden] { display: none; }
+.cinta-entorno a { color: #fff; text-decoration: underline; }
 .p-alta { background: #fde2e2; color: #a1000b; } .p-media { background: #fff1d6; color: #8a4b00; } .p-baja { background: #e3f2e5; color: #1b5e20; }
 .etiqueta-borrador, .etiqueta-cola { display: inline-flex; align-items: center; gap: 4px; font-size: .78rem; font-weight: 700; color: #8a4b00; }
 .etiqueta-cola { color: var(--azul); }

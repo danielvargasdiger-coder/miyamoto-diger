@@ -63,14 +63,15 @@ function vacioHtml(titulo, texto) {
 function htmlPorEvaluar(pend) {
   if (!pend.length) {
     return vacioHtml('No hay solicitudes pendientes',
-      'Cuando la DIGER programe visitas aparecerán aquí. Para evaluar una edificación que no está en la lista, toque el botón +.');
+      'Aquí aparecen las visitas que la DIGER le asigne a usted y las que no tienen a nadie asignado. Para evaluar una edificación que no está en la lista, toque el botón +.');
   }
   const orden = { 'ALTA': 0, 'MEDIA': 1, 'BAJA': 2 };
   pend = pend.slice().sort((a, b) => (orden[a.prioridad] ?? 3) - (orden[b.prioridad] ?? 3));
   return pend.map((s) => {
     const b = borradorDeSolicitud(s.id_solicitud);
     return '<article class="tarjeta">' +
-      '<div class="t-cab"><span class="prioridad p-' + esc((s.prioridad || '').toLowerCase()) + '">' + esc(s.prioridad || 'Sin prioridad') + '</span>' +
+      '<div class="t-cab"><span class="t-etiquetas"><span class="prioridad p-' + esc((s.prioridad || '').toLowerCase()) + '">' + esc(s.prioridad || 'Sin prioridad') + '</span>' +
+      (s.para_mi ? '<span class="asignada">' + icono('check') + 'Asignada a usted</span>' : '') + '</span>' +
       '<span class="t-id">' + esc(s.id_solicitud) + '</span></div>' +
       '<h3>' + esc(s.direccion || 'Sin dirección') + '</h3>' +
       '<p class="t-lugar">' + esc([s.barrio, s.municipio].filter(Boolean).join(' · ')) + '</p>' +
@@ -300,6 +301,16 @@ function mostrarIngreso() {
   firmaPendiente = null;
   pintarFirmas(APP.perfilAnterior && APP.perfilAnterior.firma);
   $('#modo-demo').hidden = !CONFIG.DEMO;
+  $('#enlace-demo').hidden = CONFIG.DEMO;
+  if (CONFIG.DEMO_CON_DATOS) {
+    $('#modo-demo').textContent = 'Demostración con datos de ejemplo: todo es inventado y nada sale de este celular. Los datos ya están llenos: toque «Ingresar».';
+    if (!$('#form-ingreso').elements.codigo.value) $('#form-ingreso').elements.codigo.value = 'DEMO';
+  }
+}
+
+/** Para la demostración: el perfil de ejemplo con su firma ya dibujada. */
+function perfilDeDemostracion() {
+  return Object.assign({}, Demo.PERFIL, { firma: Demo.firma(Demo.PERFIL.nombre) });
 }
 
 async function ingresar(ev) {
@@ -315,7 +326,9 @@ async function ingresar(ev) {
   cargando(true, 'Verificando el código…');
   try {
     APP.perfil = { codigo };                          // api() lo necesita para mandarlo
-    const r = await api('ingresar', { codigo, nombre: perfil.nombre, entidad_ficha: perfil.entidad_ficha, dependencia: perfil.dependencia });
+    // Con nombre y documento queda en la pestaña TECNICOS (para asignarle visitas).
+    const r = await api('ingresar', { codigo, nombre: perfil.nombre, tipo_doc: perfil.tipo_doc, num_doc: perfil.num_doc,
+      matricula: perfil.matricula, entidad_ficha: perfil.entidad_ficha, dependencia: perfil.dependencia });
     // El servidor devuelve los nombres oficiales (normalizados) y la lista al día.
     if (r.entidad_ficha) perfil.entidad_ficha = r.entidad_ficha;
     if (r.dependencia) perfil.dependencia = r.dependencia;
@@ -379,7 +392,7 @@ function enlazarMenu() {
     if (firmaPendiente) APP.perfil.firma = firmaPendiente;
     // Con señal, se normaliza y entra a la lista de una vez; sin señal, se
     // normaliza cuando llegue la primera evaluación.
-    api('ingresar', { nombre: APP.perfil.nombre, entidad_ficha: APP.perfil.entidad_ficha, dependencia: APP.perfil.dependencia })
+    api('ingresar', quienSoy())
       .then(async (r) => {
         if (r.entidad_ficha) APP.perfil.entidad_ficha = r.entidad_ficha;
         if (r.dependencia) APP.perfil.dependencia = r.dependencia;
@@ -393,6 +406,12 @@ function enlazarMenu() {
     if (APP.actual) { await aplicarPerfil(APP.actual.id, APP.actual.datos); irAPaso(APP.actual.paso); }
   });
   $('#menu-salir').addEventListener('click', async () => {
+    if (CONFIG.DEMO_CON_DATOS) {
+      const r = await preguntar('¿Salir de la demostración?', 'Se borra todo lo que hizo en la demostración y vuelve a quedar como nueva.',
+        [['si', 'Salir y reiniciar', 'peligro'], ['no', 'Cancelar', '']]);
+      if (r === 'si') await reiniciarDemostracion();
+      return;
+    }
     const pendientes = APP.cola.length + APP.borradores.length;
     const r = await preguntar('¿Salir de este celular?',
       pendientes ? 'Tiene ' + pendientes + ' evaluaciones sin enviar. No se borran: vuelven a aparecer al ingresar de nuevo.' : 'Tendrá que escribir el código otra vez.',

@@ -116,7 +116,8 @@ function pintarMapaTablero(lista) {
   });
   if (conPunto.length) m.fitBounds(L.latLngBounds(conPunto.map((e) => [+e.lat, +e.lon])), { padding: [24, 24], maxZoom: 16 });
   TABLERO.mapa = m;
-  setTimeout(() => m.invalidateSize(), 60);
+  // Si en esos 60 ms se tocó otro filtro, este mapa ya se borró: no se toca (daba error en la consola).
+  setTimeout(() => { if (TABLERO.mapa === m) m.invalidateSize(); }, 60);
 }
 
 function enlazarTablero() {

@@ -4,7 +4,7 @@
    ========================================================================= */
 'use strict';
 
-const VERSION_APP = 'miyamoto-10';     // subirla junto con VERSION en sw.js
+const VERSION_APP = 'miyamoto-11';     // subirla junto con VERSION en sw.js
 
 const APP = {
   perfil: null,          // { codigo, entidad, nombre, tipo_doc, num_doc, id_evaluador, matricula, dependencia }
@@ -220,12 +220,24 @@ async function apiDemo(accion, p) {
       await DB.guardarKV('demo-servidor', s);
       return { ok: true, entidad: CONFIG.ENTIDAD, entidad_ficha: ent, dependencia: dep, listas: l, esquema: Esquema.huella() };
     }
-    case 'catalogo':
-      return { ok: true, solicitudes: SOLICITUDES_DEMO, evaluaciones: Object.values(s.evaluaciones), esquema: Esquema.huella() };
+    case 'catalogo': {
+      // Las enviadas en la demostración, más (con ?demo=1) las de ejemplo del equipo.
+      const yo = p.nombre || (APP.perfil && APP.perfil.nombre) || '';
+      const propias = Object.values(s.evaluaciones).map((ev) => { const x = Object.assign({}, ev); delete x.datos; delete x.fotosData; return x; });
+      const conDatos = CONFIG.DEMO_CON_DATOS;
+      const hechas = new Set(propias.map((e) => e.id_solicitud).filter(Boolean));
+      return {
+        ok: true,
+        solicitudes: (conDatos ? Demo.solicitudes(yo) : SOLICITUDES_DEMO).filter((x) => !hechas.has(x.id_solicitud)),
+        evaluaciones: propias.concat(conDatos ? Demo.evaluaciones(yo) : []),
+        esquema: Esquema.huella()
+      };
+    }
     case 'guardar_evaluacion': {
       let ev = s.evaluaciones[p.id];
-      if (!ev) { s.n++; ev = { id: p.id, num_formulario: 'DEMO-' + new Date().getFullYear() + '-' + String(s.n).padStart(4, '0'), fotos: [] }; }
-      Object.assign(ev, resumenDeDatos(p.datos), { id: p.id, fotos: ev.fotos });
+      // Con datos de ejemplo, el consecutivo sigue después de los de ejemplo (DEMO-…-0043).
+      if (!ev) { s.n = Math.max(s.n, CONFIG.DEMO_CON_DATOS ? Demo.N_EVALUACIONES : 0) + 1; ev = { id: p.id, num_formulario: 'DEMO-' + new Date().getFullYear() + '-' + String(s.n).padStart(4, '0'), fotos: [] }; }
+      Object.assign(ev, resumenDeDatos(p.datos), { id: p.id, fotos: ev.fotos, datos: p.datos, fotosData: ev.fotosData || {} });
       s.evaluaciones[p.id] = ev;
       await DB.guardarKV('demo-servidor', s);
       return { ok: true, num_formulario: ev.num_formulario, fotosRecibidas: ev.fotos };
@@ -233,14 +245,30 @@ async function apiDemo(accion, p) {
     case 'subir_foto': {
       const ev = s.evaluaciones[p.id];
       if (ev && ev.fotos.indexOf(p.nombre) === -1) ev.fotos.push(p.nombre);
+      if (ev) ev.fotosData[p.nombre] = 'data:' + (p.tipo || 'image/jpeg') + ';base64,' + p.base64;   // para abrir su ficha después
       await DB.guardarKV('demo-servidor', s);
       return { ok: true };
     }
-    case 'cerrar_evaluacion':
-      return { ok: true, estado: 'COMPLETA', faltan: [], ficha_url: '' };
+    case 'cerrar_evaluacion': {
+      const ev = s.evaluaciones[p.id];
+      if (ev) { ev.ficha_url = '#demo-ficha=' + p.id; ev.estado = 'COMPLETA'; await DB.guardarKV('demo-servidor', s); }
+      return { ok: true, estado: 'COMPLETA', faltan: [], ficha_url: '#demo-ficha=' + p.id };
+    }
+    case 'pdf_evaluacion': {
+      const e = new Error('En la demostración el PDF no se arma en el servidor: toque «Abrir ficha» y luego «Imprimir / PDF».');
+      e.delServidor = true;
+      throw e;
+    }
     default:
       throw new Error('Acción no disponible en demostración: ' + accion);
   }
+}
+
+/** Quién es, para el registro de TECNICOS y para recibir solo sus visitas asignadas. */
+function quienSoy() {
+  const p = APP.perfil || {};
+  return { nombre: p.nombre || '', tipo_doc: p.tipo_doc || '', num_doc: p.num_doc || '', matricula: p.matricula || '',
+    entidad_ficha: p.entidad_ficha || '', dependencia: p.dependencia || '' };
 }
 
 /** Lo mínimo para listar y ubicar una evaluación sin abrirla. */

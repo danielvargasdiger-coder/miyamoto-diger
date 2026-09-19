@@ -539,7 +539,44 @@ async function abrirVistaPrevia(idEval, datos, aviso) {
   } finally { cargando(false); }
 }
 
+/**
+ * Demostración: "Abrir ficha" (enlaces #demo-ficha=ID) arma la ficha aquí
+ * mismo. Las de ejemplo se dibujan (fotos y firma); las que se enviaron en
+ * la demostración salen de lo guardado en el celular.
+ */
+async function abrirFichaDemo(id) {
+  cargando(true, 'Armando la ficha…');
+  try {
+    let datos = Demo.datosDe(id, APP.perfil && APP.perfil.nombre), fotos = {}, firma = '';
+    if (datos) ({ fotos, firma } = Demo.fotosDe(id, datos));
+    else {
+      const s = (await DB.leerKV('demo-servidor')) || { evaluaciones: {} };
+      const ev = s.evaluaciones[id];
+      if (!ev || !ev.datos) { toast('No se encontró esa ficha en la demostración.', 'error'); return; }
+      datos = Object.assign({}, ev.datos, { num_formulario: ev.num_formulario });
+      if (datos.fecha_hora_inspeccion) datos.fecha_hora_inspeccion = ahoraLocal(new Date(datos.fecha_hora_inspeccion));
+      Object.keys(Esquema.CAMPOS).forEach((k) => {
+        const c = Esquema.CAMPOS[k];
+        if (!Array.isArray(datos[k])) return;
+        const urls = datos[k].map((n) => (ev.fotosData || {})[n]).filter(Boolean);
+        if (c.tipo === 'fotos') fotos[k] = urls;
+        if (c.tipo === 'firma' && urls[0]) firma = urls[0];
+      });
+    }
+    $('#previa-marco').srcdoc = Ficha.html(Esquema.limpiarOcultos(datos), { logos: LOGOS_FICHA, fotos, firma,
+      sello: 'FICHA DE DEMOSTRACIÓN generada el ' + Ficha.ahoraColombia() + ' con datos inventados. No corresponde a ninguna edificación real.' });
+    $('#vista-previa').hidden = false;
+  } finally { cargando(false); }
+}
+
 function iniciarEventosFicha() {
+  // Los enlaces de ficha de la demostración no salen de la app.
+  document.addEventListener('click', (ev) => {
+    const a = ev.target.closest && ev.target.closest('a[href^="#demo-ficha="]');
+    if (!a) return;
+    ev.preventDefault();
+    abrirFichaDemo(a.getAttribute('href').slice('#demo-ficha='.length));
+  }, true);
   $('#btn-salir-ficha').addEventListener('click', salirDeFicha);
   $('#btn-anterior').addEventListener('click', () => pasoRelativo(-1));
   $('#btn-siguiente').addEventListener('click', () => {

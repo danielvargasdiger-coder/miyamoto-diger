@@ -139,7 +139,7 @@ async function sincronizar(silencioso) {
   pintarConexion();
   try {
     await enviarCola(true);
-    const r = await api('catalogo', {});
+    const r = await api('catalogo', quienSoy());
     APP.solicitudes = r.solicitudes || [];
     APP.historial = r.evaluaciones || [];
     await guardarListas(r.listas);

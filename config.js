@@ -15,6 +15,9 @@
  *
  * Si API_URL está vacío, la app funciona en MODO DEMOSTRACIÓN: se puede
  * llenar todo, ver la ficha y "enviar", pero nada sale del celular.
+ * Con ?demo=1 en la dirección (enlace en la pantalla de ingreso) también,
+ * y viene llena de datos de ejemplo (js/demo.js) para mostrar la app. Usa
+ * su propia base local ('miyamoto-demo'): no se cruza con la real.
  */
 var CONFIG = (function () {
   var SERVIDORES = {
@@ -26,13 +29,16 @@ var CONFIG = (function () {
   var ruta = (self.location && self.location.pathname) || '';
   var host = (self.location && self.location.hostname) || '';
   var local = host === 'localhost' || host === '127.0.0.1';
-  var entorno = (ruta.indexOf('/pruebas/') !== -1 || local) ? 'pruebas' : 'produccion';
-  var api = SERVIDORES[entorno];
+  var demoPedido = /[?&]demo(=|&|$)/.test((self.location && self.location.search) || '');
+  var entorno = demoPedido ? 'demo' : ((ruta.indexOf('/pruebas/') !== -1 || local) ? 'pruebas' : 'produccion');
+  var api = demoPedido ? '' : SERVIDORES[entorno];
 
   return {
     ENTORNO: entorno,
     API_URL: api,
     DEMO: !api,
+    /** Demostración con datos de ejemplo (entró por ?demo=1). */
+    DEMO_CON_DATOS: demoPedido,
 
     /**
      * Servidor del que la página ficha.html lee las fichas compartidas.

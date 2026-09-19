@@ -7,6 +7,9 @@ async function iniciar() {
   document.body.classList.toggle('entorno-pruebas', CONFIG.ENTORNO === 'pruebas');
   document.body.classList.toggle('modo-demo', CONFIG.DEMO);
   $('#cinta-entorno').textContent = CONFIG.DEMO ? 'DEMOSTRACIÓN · nada sale del celular' : (CONFIG.ENTORNO === 'pruebas' ? 'PRUEBAS' : '');
+  if (CONFIG.DEMO_CON_DATOS) {
+    $('#cinta-entorno').innerHTML = 'DEMOSTRACIÓN · datos de ejemplo · <a href="./">Salir</a>';
+  }
 
   enlazarInicio();
   enlazarMenu();
@@ -24,6 +27,7 @@ async function iniciar() {
 
   await cargarListas();
   APP.perfil = await DB.leerKV('perfil');
+  if (!APP.perfil && CONFIG.DEMO_CON_DATOS) APP.perfilAnterior = perfilDeDemostracion();
   if (!APP.perfil) { mostrarIngreso(); return; }
   entrarApp();
   sincronizar(true);
@@ -41,6 +45,14 @@ async function entrarApp() {
   entrarApp._reloj = setInterval(() => { if (navigator.onLine) sincronizar(true); }, CONFIG.MINUTOS_AUTOSYNC * 60000);
   window.addEventListener('online', () => sincronizar(true));
   window.addEventListener('offline', pintarConexion);
+}
+
+/** Borra la base local de la demostración (nunca la real) y la deja como nueva. */
+async function reiniciarDemostracion() {
+  if (!CONFIG.DEMO_CON_DATOS || NOMBRE_BD !== 'miyamoto-demo') return;
+  if (DB._db) { DB._db.close(); DB._db = null; }
+  await new Promise((ok) => { const r = indexedDB.deleteDatabase(NOMBRE_BD); r.onsuccess = r.onerror = r.onblocked = () => ok(); });
+  location.reload();
 }
 
 // ---------------------------------------------------------------- ACTUALIZACIONES

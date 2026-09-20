@@ -133,6 +133,32 @@ var Esquema = (function () {
   // (columnas M en amarillo, vigas S en rojo, colapso parcial en rojo,
   // licuación en amarillo) y no miraba la sección 10; aquí manda el papel.
   var V = 'verde', A = 'amarillo', R = 'rojo';
+
+  /**
+   * Barrios y veredas oficiales. NO van en LISTAS ni en la huella: los carga
+   * la app desde datos/zonas.json (zonas.js) y el servidor no los necesita
+   * para nada, solo guarda el nombre.
+   */
+  var NOMBRES_ZONA = { urbano: [], rural: [] };
+  function ponerNombresZona(urbano, rural) {
+    NOMBRES_ZONA.urbano = urbano || [];
+    NOMBRES_ZONA.rural = rural || [];
+  }
+  /** Nombres que corresponden según la zona marcada (si no hay zona, todos). */
+  function nombresZona(datos) {
+    var z = (datos || {}).zona;
+    if (z === 'rural') return NOMBRES_ZONA.rural;
+    if (z === 'urbano') return NOMBRES_ZONA.urbano;
+    return NOMBRES_ZONA.urbano.concat(NOMBRES_ZONA.rural);
+  }
+  /** Devuelve el nombre oficial que coincide (sin tildes ni mayúsculas), o ''. */
+  function nombreOficial(datos, texto) {
+    var t = normalizarTexto(texto);
+    if (!t) return '';
+    var lista = nombresZona(datos);
+    for (var i = 0; i < lista.length; i++) if (normalizarTexto(lista[i]) === t) return lista[i];
+    return '';
+  }
   var ESTRUCTURALES = [          // sección 9: [id, etiqueta, color N/L, M, S]
     ['columnas', 'Columnas', V, R, R],
     ['muros_portantes', 'Muros portantes', V, R, R],
@@ -213,7 +239,13 @@ var Esquema = (function () {
       { id: 'ubicacion', etiqueta: 'Ubicación (WGS 84)', tipo: 'gps', req: true },
       { id: 'departamento', etiqueta: 'Departamento', tipo: 'una', lista: 'departamento', req: true, fijo: 'risaralda' },
       { id: 'municipio', etiqueta: 'Municipio', tipo: 'una', lista: 'municipio', req: true, fijo: 'pereira' },
-      { id: 'barrio_vereda', etiqueta: 'Barrio/Vereda', tipo: 'texto', req: true },
+      // Se ESCOGE de la lista oficial (capas de la Alcaldía, datos/zonas.json):
+      // nunca se escribe, así el nombre queda limpio y siempre igual.
+      // NO es obligatorio a propósito (19/09): si la ubicación cae fuera de
+      // todos los polígonos queda en blanco, y esas fichas le sirven a la
+      // DIGER para ver qué le falta a la capa.
+      { id: 'barrio_vereda', etiqueta: 'Barrio/Vereda', tipo: 'buscable', zonaLista: true,
+        nota: 'Se escoge de la lista; en blanco si la ubicación cae fuera de la capa' },
       { id: 'zona', etiqueta: 'Zona', tipo: 'una', lista: 'zona', req: true }
     ] },
     { id: 's4', n: '4', titulo: 'Identificación de la edificación', campos: [
@@ -629,6 +661,10 @@ var Esquema = (function () {
     if (campo.fijo && v !== campo.fijo) return 'Debe ser ' + etiquetaDe(campo.lista, campo.fijo);
     if (campo.excluye && v === 'si' && datos[campo.excluye] === 'si') return 'No puede haber colapso total y parcial a la vez';
     if (campo.coherencia) { var co = coherenciaDano(datos); if (co.bloquea) return co.bloquea; }
+    // Barrio/Vereda: solo nombres de la capa oficial.
+    if (campo.zonaLista && nombresZona(datos).length && !nombreOficial(datos, v)) {
+      return 'Escoja un barrio o vereda de la lista';
+    }
     if (campo.confirmaMasa && v !== 'si') return 'Si no corresponde, marque "No" en movimientos en masa';
     if (campo.tipo === 'entero' || campo.tipo === 'decimal') {
       var n = aNumero(v);
@@ -787,6 +823,9 @@ var Esquema = (function () {
     sugerencia: sugerencia,
     menosGraveQueSugerencia: menosGraveQueSugerencia,
     sugerenciaDano: sugerenciaDano,
+    ponerNombresZona: ponerNombresZona,
+    nombresZona: nombresZona,
+    nombreOficial: nombreOficial,
     coherenciaDano: coherenciaDano,
     amenazasExternas: amenazasExternas,
     DEFINICION_NIVEL: DEFINICION_NIVEL,

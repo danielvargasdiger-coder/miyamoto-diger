@@ -12,13 +12,14 @@ function datosIniciales(solicitud) {
     fecha_hora_inspeccion: ahoraLocal(),
     tipo_amenaza: 'sismo',          // pedido de la DIGER: casi todas son por sismo; se puede cambiar
     departamento: 'risaralda',
-    municipio: 'pereira',
-    zona: 'urbano'
+    municipio: 'pereira'
+    // Sin zona por defecto (19/09): la pone la ubicación, y si cae fuera de
+    // la capa el evaluador tiene que escoger Urbano o Rural a conciencia.
   };
   if (solicitud) {
     d.id_solicitud = solicitud.id_solicitud;
     d.direccion = solicitud.direccion || '';
-    d.barrio_vereda = solicitud.barrio || '';
+    d.barrio_vereda = solicitud.barrio || '';   // se valida contra la lista al abrir la sección
     d.persona_contacto = solicitud.contacto || '';
     d.num_contacto = solicitud.telefono || '';
   }
@@ -325,6 +326,18 @@ function motivoJustificacion(c) {
   return '';
 }
 
+/** Actualiza solo el aviso de error de un campo, sin volver a dibujar la sección. */
+function refrescarError(id, raiz) {
+  if (!APP.actual.mostrarErrores) return;
+  const caja = $('[data-campo="' + id + '"]', raiz);
+  if (!caja) return;
+  const viejo = $('.error', caja);
+  const e = Esquema.errorDe(Esquema.CAMPOS[id], APP.actual.datos);
+  if (viejo && !e) viejo.remove();
+  else if (viejo) viejo.textContent = e;
+  else if (e) caja.insertAdjacentHTML('beforeend', '<span class="error">' + esc(e) + '</span>');
+}
+
 function errorVisible(c) {
   // La incoherencia habitabilidad / nivel de daño se avisa de una vez, no solo al intentar enviar.
   if (c.coherencia) {
@@ -336,9 +349,19 @@ function errorVisible(c) {
   return e ? '<span class="error">' + esc(e) + '</span>' : '';
 }
 
+/** Barrio/Vereda: avisar cuando lo puso la app, para que se pueda corregir. */
+function notaDeCampo(c) {
+  const d = APP.actual.datos;
+  if (c.id === 'barrio_vereda' && d.zona_auto && d.zona_auto === d.barrio_vereda) {
+    return 'Tomado de la ubicación · puede cambiarlo';
+  }
+  return c.nota;
+}
+
 function cabeceraCampo(c) {
+  const nota = notaDeCampo(c);
   return '<div class="c-etiqueta">' + esc(c.etiqueta) + (c.req ? ' <span class="req" aria-label="obligatorio">*</span>' : '') +
-    (c.nota ? ' <span class="c-nota">' + esc(c.nota) + '</span>' : '') + '</div>';
+    (nota ? ' <span class="c-nota">' + esc(nota) + '</span>' : '') + '</div>';
 }
 
 function htmlCampo(c) {
@@ -359,6 +382,11 @@ function htmlCampo(c) {
       return envoltura('<label>' + cabeceraCampo(c) + '<input type="' + tipo + '" inputmode="' + modo + '" data-id="' + c.id +
         '" value="' + esc(v == null ? '' : v) + '" maxlength="' + (c.tipo === 'texto' ? 300 : 30) + '" autocomplete="off"></label>');
     }
+    case 'buscable':
+      // Botón, no casilla de texto: el nombre solo entra tocándolo en la lista.
+      return envoltura(cabeceraCampo(c) +
+        '<button type="button" class="elegir-zona' + (v ? '' : ' vacio') + '" data-buscable="' + c.id + '">' +
+        '<span>' + esc(v || 'Sin barrio · toque para elegir') + '</span>' + icono('derecha') + '</button>');
     case 'largo':
       return envoltura('<label>' + cabeceraCampo(c) +
         '<textarea rows="' + (c.id === 'comentarios_finales' ? 4 : 3) + '" maxlength="4000" data-id="' + c.id + '"' +
@@ -516,9 +544,12 @@ function enlazarSeccion(raiz) {
         if (limpio !== el.value) el.value = limpio;
       }
       d[el.dataset.id] = el.value;
+      refrescarError(el.dataset.id, raiz);   // el "Falta" desaparece al escribir
       cambio(el.tagName === 'SELECT');
     });
   });
+
+  $$('[data-buscable]', raiz).forEach((b) => b.addEventListener('click', () => abrirSelectorZona(b.dataset.buscable)));
 
   $$('[data-una]', raiz).forEach((b) => b.addEventListener('click', async () => {
     const id = b.dataset.una;
@@ -571,12 +602,69 @@ function enlazarSeccion(raiz) {
   const irMenu = $('[data-ir-menu]', raiz);
   if (irMenu) irMenu.addEventListener('click', abrirMenu);
 
+  if ($('[data-buscable]', raiz) && !Esquema.nombresZona(d).length) {
+    cargarZonas().then(() => { if (APP.actual && APP.actual.datos === d) cambio(true); });
+  }
+
   const btnGps = $('#btn-gps', raiz);
   if (btnGps) enlazarGps(raiz);
 
   $$('[data-ir]', raiz).forEach((b) => b.addEventListener('click', () => irAPaso(b.dataset.ir, b.dataset.campoIr)));
   const env = $('#btn-enviar', raiz);
   if (env) env.addEventListener('click', enviarActual);
+}
+
+/**
+ * Selector de barrio o vereda: pantalla completa, agrupado por comuna o
+ * corregimiento. El buscador SOLO filtra la lista; el valor entra únicamente
+ * al tocar un renglón, así nadie puede escribir un barrio que no exista.
+ */
+async function abrirSelectorZona(campo) {
+  const d = APP.actual.datos;
+  cargando(true, 'Abriendo la lista…');
+  await cargarZonas();
+  cargando(false);
+  const grupos = gruposDeZonas();
+  if (!grupos.length) { toast('No se pudo abrir la lista de barrios.', 'error'); return; }
+
+  const caja = document.createElement('section');
+  caja.className = 'vista pantalla selector-zona';
+  caja.innerHTML =
+    '<header class="ficha-cab">' +
+    '<button type="button" class="btn-icono" data-cerrar aria-label="Cerrar">' +
+    '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>' +
+    '<div class="ficha-cab-texto"><b>Barrio o vereda</b><span>Toque el que corresponde</span></div></header>' +
+    '<div class="selector-buscar"><input type="search" id="selector-filtro" placeholder="Buscar…" autocomplete="off"></div>' +
+    '<div class="selector-lista" id="selector-lista"></div>';
+  document.body.appendChild(caja);
+  document.body.classList.add('sin-scroll');
+
+  const lista = $('#selector-lista', caja);
+  const pintar = (texto) => {
+    const t = Esquema.normalizarTexto(texto || '');
+    let html = '', hallados = 0;
+    grupos.forEach((g) => {
+      const nombres = t ? g.nombres.filter((n) => Esquema.normalizarTexto(n).indexOf(t) !== -1) : g.nombres;
+      if (!nombres.length) return;
+      hallados += nombres.length;
+      html += '<h3 class="selector-grupo">' + esc(g.grupo) + ' · ' + (g.tipo === 'rural' ? 'rural' : 'urbano') + '</h3>' +
+        nombres.map((n) => '<button type="button" class="selector-item' + (n === d[campo] ? ' elegido' : '') +
+          '" data-nombre="' + esc(n) + '" data-tipo="' + g.tipo + '">' + esc(n) + '</button>').join('');
+    });
+    lista.innerHTML = hallados ? html : '<p class="selector-vacio">No hay barrios ni veredas con ese nombre.</p>';
+    $$('.selector-item', lista).forEach((b) => b.addEventListener('click', () => {
+      d[campo] = b.dataset.nombre;
+      d.zona = b.dataset.tipo;               // barrio -> urbano, vereda -> rural
+      delete d.zona_auto;                    // lo escogió el evaluador
+      cerrar();
+      cambio(true);
+    }));
+  };
+  const cerrar = () => { caja.remove(); document.body.classList.remove('sin-scroll'); };
+  $('[data-cerrar]', caja).addEventListener('click', cerrar);
+  $('#selector-filtro', caja).addEventListener('input', (ev) => pintar(ev.target.value));
+  pintar('');
+  setTimeout(() => { const f = $('#selector-filtro', caja); if (f) f.focus(); }, 50);
 }
 
 /** En los campos de número solo entran números (y un separador decimal). */
@@ -663,6 +751,7 @@ function enlazarGps(raiz) {
         d.ubicacion = { lat: m.lat, lon: m.lon, precision: m.precision };
         if (!Esquema.coordenadaValida(m.lat, m.lon)) toast('Ojo: esa ubicación queda fuera de Risaralda.', 'error');
         cambio(true);
+        ponerZona(d);
       },
       error: (e) => {
         btn.disabled = false; btn.innerHTML = icono('ubicacion') + 'Tomar ubicación';
@@ -676,13 +765,37 @@ function enlazarGps(raiz) {
     const s = APP.actual.solicitud;
     d.ubicacion = { lat: +s.lat, lon: +s.lon, precision: null, manual: true, origen: 'solicitud' };
     cambio(true);
+    ponerZona(d);
   });
   $('#gps-manual-ok', raiz).addEventListener('click', () => {
     const lat = Esquema.aNumero($('#gps-lat', raiz).value), lon = Esquema.aNumero($('#gps-lon', raiz).value);
     if (!Esquema.coordenadaValida(lat, lon)) { toast('Esa coordenada no queda en Risaralda. Revise el orden y el signo menos.', 'error'); return; }
     d.ubicacion = { lat, lon, precision: null, manual: true };
     cambio(true);
+    ponerZona(d);
   });
+}
+
+/**
+ * Con la ubicación ya puesta, la app dice en qué barrio o vereda cayó
+ * (capas de la Alcaldía, dentro del celular) y llena Zona y Barrio/Vereda.
+ * No pisa lo que el evaluador haya escrito a mano.
+ */
+async function ponerZona(d) {
+  const antesBarrio = d.barrio_vereda;
+  const cambió = await completarZonaPorUbicacion(d);
+  if (!APP.actual || APP.actual.datos !== d) return;     // cerró la ficha mientras tanto
+  if (cambió) {
+    toast((d.zona === 'rural' ? 'Vereda' : 'Barrio') + ': ' + d.barrio_vereda + (antesBarrio ? ' (antes: ' + antesBarrio + ')' : ''));
+    cambio(true);
+    return;
+  }
+  // Escribió el barrio a mano: no se le pisa, pero si la ubicación cae en otro
+  // se lo avisamos, para que no quede un dato que no corresponde al punto.
+  const r = await buscarZonaDePunto(d.ubicacion.lat, d.ubicacion.lon);
+  if (!APP.actual || APP.actual.datos !== d || !r) return;
+  if (Esquema.normalizarTexto(r.nombre) === Esquema.normalizarTexto(d.barrio_vereda || '')) return;
+  toast('Esa ubicación cae en ' + r.nombre + ' (' + (r.zona === 'rural' ? 'rural' : 'urbano') + '). Cambie el barrio si corresponde.');
 }
 
 // ---------------------------------------------------------------- VISTA PREVIA

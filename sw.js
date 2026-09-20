@@ -16,7 +16,7 @@
  */
 const ENTORNO = self.location.pathname.indexOf('/pruebas/') !== -1 ? 'pruebas' : 'prod';
 const PREFIJO = 'miyamoto-' + ENTORNO;
-const VERSION = PREFIJO + '-v20';
+const VERSION = PREFIJO + '-v23';
 
 /**
  * Cuadritos del mapa ya vistos. NO lleva el número de versión: borrarlos en
@@ -39,6 +39,7 @@ const ARCHIVOS = [
   './js/base.js',
   './js/gps.js',
   './js/fotos.js',
+  './js/zonas.js',
   './js/formulario.js',
   './js/envio.js',
   './js/descargas.js',
@@ -58,6 +59,7 @@ const ARCHIVOS = [
   './img/icon-512.png',
   './img/logo-app.png',
   './img/logo-diger.png',
+  './datos/zonas.json',
   './img/ejemplo-movimiento-masa.jpg',
   './img/logo-sngrd.png',
   './img/logo-usaid-miyamoto.png',

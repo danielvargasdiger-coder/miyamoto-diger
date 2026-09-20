@@ -268,6 +268,24 @@ body.modo-demo, body.entorno-pruebas { --alto-cinta: 22px; padding-top: var(--al
 .ejemplo-masa { margin: 8px 0 12px; border: 1px solid var(--borde); border-radius: var(--radio); overflow: hidden; background: var(--fondo); }
 .ejemplo-masa img { display: block; width: 100%; max-height: 320px; object-fit: cover; }
 .ejemplo-masa figcaption { padding: 10px 12px; font-size: .92rem; line-height: 1.45; color: var(--texto); }
+/* Barrio/Vereda: botón que abre el selector, nunca un campo de texto. */
+.elegir-zona { width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: #fff; border: 1.5px solid var(--borde); border-radius: 10px; padding: 10px 12px; font: inherit; font-weight: 600;
+  color: var(--texto); text-align: left; cursor: pointer; }
+.elegir-zona.vacio { color: var(--texto-suave); font-weight: 500; }
+.elegir-zona .ico { width: 20px; height: 20px; flex: none; color: var(--texto-suave); }
+.selector-zona { z-index: 70; }   /* .pantalla ya la pone a pantalla completa, debajo de la cinta */
+.selector-buscar { flex: none; padding: 10px 12px; background: #fff; border-bottom: 1px solid var(--borde); }
+.selector-buscar input { width: 100%; min-height: 44px; border: 1.5px solid var(--borde); border-radius: 22px;
+  padding: 8px 14px; font: inherit; color: var(--texto); background: #fff; }
+.selector-lista { flex: 1; overflow-y: auto; padding: 8px 12px 24px; -webkit-overflow-scrolling: touch; }
+.selector-grupo { position: sticky; top: 0; margin: 10px 0 4px; padding: 6px 0; font-size: .82rem; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--texto-suave); background: var(--fondo); }
+.selector-item { display: block; width: 100%; min-height: 48px; text-align: left; background: #fff; border: 1px solid var(--borde);
+  border-radius: 10px; margin-bottom: 6px; padding: 12px 14px; font: inherit; color: var(--texto); cursor: pointer; }
+.selector-item.elegido { background: var(--azul-claro); border-color: var(--azul); font-weight: 700; }
+.selector-vacio { text-align: center; color: var(--texto-suave); margin-top: 24px; }
+
 .fallo-arranque { position: fixed; inset: 0; z-index: 999; background: rgba(11, 79, 108, .88); display: flex; align-items: center; justify-content: center; padding: 20px; }
 .fallo-caja { background: #fff; border-radius: var(--radio); padding: 18px 16px; max-width: 420px; text-align: center; box-shadow: var(--sombra); }
 .fallo-caja b { display: block; color: var(--error); margin-bottom: 6px; }

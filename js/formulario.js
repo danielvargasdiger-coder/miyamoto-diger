@@ -19,7 +19,8 @@ function datosIniciales(solicitud) {
   if (solicitud) {
     d.id_solicitud = solicitud.id_solicitud;
     d.direccion = solicitud.direccion || '';
-    d.barrio_vereda = solicitud.barrio || '';   // se valida contra la lista al abrir la sección
+    // El barrio de la solicitud es texto libre de quien la digitó: NO se copia.
+    // Barrio/Vereda y Zona salen solo de la ubicación o de la lista oficial (20/09).
     d.persona_contacto = solicitud.contacto || '';
     d.num_contacto = solicitud.telefono || '';
   }
@@ -55,6 +56,7 @@ async function abrirEvaluacion(opciones) {
   // Antes de la "foto" de abajo: así aplicar el perfil no cuenta como un cambio del ingeniero.
   await aplicarPerfil(registro.id, registro.datos);
   Esquema.aplicarFijos(registro.datos);   // borradores de antes del bloqueo
+  await depurarBarrio(registro.datos);
   APP.actual = {
     id: registro.id,
     datos: registro.datos,
@@ -251,6 +253,21 @@ function gruposDano(campos) {
     grupos[grupos.length - 1].push(c);
   });
   return grupos.map((g) => '<div class="grupo-dano">' + g.map(htmlCampo).join('') + '</div>').join('');
+}
+
+/**
+ * Un barrio o vereda que no esté en la lista oficial se quita (venía de una
+ * solicitud o de un borrador anterior a la lista): si no, la ficha quedaría
+ * con un nombre que no existe y sin dejar enviar. Si la lista no cargó, no
+ * se toca nada.
+ */
+async function depurarBarrio(d) {
+  if (!d.barrio_vereda) return;
+  await cargarZonas();
+  if (!Esquema.nombresZona(d).length) return;
+  const oficial = Esquema.nombreOficial(d, d.barrio_vereda);
+  if (oficial) d.barrio_vereda = oficial;
+  else { delete d.barrio_vereda; delete d.zona_auto; }
 }
 
 /** Sección 16: solo se ve. Se cambia desde "Mis datos" (menú). */

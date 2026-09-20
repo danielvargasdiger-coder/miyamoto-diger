@@ -20,7 +20,7 @@
 var Esquema = (function () {
   'use strict';
 
-  var VERSION = '2026-09-19.1';
+  var VERSION = '2026-09-19.2';
 
   // ---------------------------------------------------------------- LISTAS
   // [código, etiqueta, (filtro)]. El código es lo que viaja y se guarda en
@@ -276,9 +276,9 @@ var Esquema = (function () {
     ] },
     { id: 's12', n: '12', titulo: 'Clasificación de habitabilidad y del daño', sugerencia: true, campos: [
       { id: 'clasif_habitabilidad', etiqueta: 'Clasificación de habitabilidad', tipo: 'una', lista: 'habitabilidad', req: true },
-      { id: 'justificacion_clasif', etiqueta: 'Justifique la habitabilidad', tipo: 'largo', req: true, minLargo: 20, si: { menosGraveQueSugerencia: true } },
+      { id: 'justificacion_clasif', etiqueta: 'Justifique la habitabilidad', tipo: 'largo', req: true, si: { menosGraveQueSugerencia: true } },
       { id: 'nivel_dano', etiqueta: 'Clasificación del daño', tipo: 'una', lista: 'nivel_dano', req: true, coherencia: true },
-      { id: 'justificacion_dano', etiqueta: 'Justifique el nivel de daño', tipo: 'largo', req: true, minLargo: 20,
+      { id: 'justificacion_dano', etiqueta: 'Justifique el nivel de daño', tipo: 'largo', req: true,
         si: { justificarDano: true } },
       { id: 'eval_previa', etiqueta: '¿Existe una evaluación previa?', tipo: 'una', lista: 'si_no', req: true },
       { id: 'eval_previa_tipo', etiqueta: 'Tipo de evaluación', tipo: 'texto', si: SI_PREVIA },
@@ -298,7 +298,7 @@ var Esquema = (function () {
     ] },
     { id: 's15', n: '15', titulo: 'Comentarios finales', campos: [
       // Obligatorio (19/09), pero sin presionar: solo una guía corta.
-      { id: 'comentarios_finales', etiqueta: 'Comentarios finales', tipo: 'largo', req: true, minLargo: 20,
+      { id: 'comentarios_finales', etiqueta: 'Comentarios finales', tipo: 'largo', req: true,
         nota: 'Puntos relevantes sobre la edificación que no quedaron en el formulario: observaciones, riesgos o recomendaciones.' }
     ] },
     { id: 's16', n: '16', titulo: 'Información del evaluador', soloLectura: true, campos: [
@@ -628,7 +628,6 @@ var Esquema = (function () {
     if (vacio(v)) return campo.req ? 'Falta' : '';
     if (campo.fijo && v !== campo.fijo) return 'Debe ser ' + etiquetaDe(campo.lista, campo.fijo);
     if (campo.excluye && v === 'si' && datos[campo.excluye] === 'si') return 'No puede haber colapso total y parcial a la vez';
-    if (campo.minLargo && String(v).trim().length < campo.minLargo) return 'Mínimo ' + campo.minLargo + ' letras';
     if (campo.coherencia) { var co = coherenciaDano(datos); if (co.bloquea) return co.bloquea; }
     if (campo.confirmaMasa && v !== 'si') return 'Si no corresponde, marque "No" en movimientos en masa';
     if (campo.tipo === 'entero' || campo.tipo === 'decimal') {

@@ -16,8 +16,21 @@
   var LOGOS = { sngrd: 'img/logo-sngrd.png', miyamoto: 'img/logo-usaid-miyamoto.png', pie: 'img/logos-pie.png', entidad: 'img/logo-app.png' };
   var $ = function (s) { return document.querySelector(s); };
 
+  /** Volver: a la pantalla anterior si la hay; si la ficha se abrió en una
+   *  pestaña nueva desde la app, a la app. Se enlaza de una, así el botón
+   *  sirve también cuando la ficha no carga. */
+  function enlazarVolver() {
+    $('#btn-volver').onclick = function () {
+      if (history.length > 1) history.back();
+      else location.href = './';
+    };
+  }
+
   function mostrarError(texto) {
     $('#contenido').innerHTML = '<div class="estado error"><b>No se pudo abrir la ficha</b><p>' + Ficha.esc(texto) + '</p></div>';
+    $('#barra').hidden = false;
+    $('#barra').classList.add('solo-volver');
+    enlazarVolver();
   }
 
   /**
@@ -66,12 +79,11 @@
 
   function enlazarBarra(num) {
     var enlace = location.href;
-    var mensaje = 'Evaluación de daños ' + num + ' — DIGER Pereira: ' + enlace;
     $('#titulo-ficha').textContent = 'Formulario ' + num;
-    $('#btn-whatsapp').href = 'https://wa.me/?text=' + encodeURIComponent(mensaje);
+    enlazarVolver();
     $('#btn-imprimir').onclick = function () { window.print(); };
     $('#btn-copiar').onclick = function () {
-      var hecho = function (ok) { $('#aviso-copia').textContent = ok ? 'Enlace copiado. Ya lo puede pegar en WhatsApp o en un oficio.' : 'Copie el enlace de la barra de direcciones.'; setTimeout(function () { $('#aviso-copia').textContent = ''; }, 4000); };
+      var hecho = function (ok) { $('#aviso-copia').textContent = ok ? 'Enlace copiado. Ya lo puede pegar donde lo necesite.' : 'Copie el enlace de la barra de direcciones.'; setTimeout(function () { $('#aviso-copia').textContent = ''; }, 4000); };
       if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(enlace).then(function () { hecho(true); }, function () { hecho(false); });
       else hecho(false);
     };

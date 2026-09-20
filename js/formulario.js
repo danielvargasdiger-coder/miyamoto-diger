@@ -470,26 +470,18 @@ function htmlEjemploMasa() {
     '<br>Tome una foto del movimiento en masa que ve cerca de la edificación.</figcaption></figure>';
 }
 
-/** La solicitud trae coordenadas: sirven si el GPS no alcanza (dentro de una casa, sin cielo). */
-function solicitudConPunto() {
-  const s = APP.actual && APP.actual.solicitud;
-  return !!s && Esquema.coordenadaValida(s.lat, s.lon);
-}
-
 function htmlGps(v) {
   const hay = v && v.lat != null;
   const calidad = hay ? calidadGps(v.precision) : '';
   return '<div class="gps">' +
     '<div class="gps-dato ' + calidad + '" id="gps-dato">' + (hay
       ? '<b>' + Number(v.lat).toFixed(6) + ', ' + Number(v.lon).toFixed(6) + '</b><span>' +
-        (v.origen === 'solicitud' ? 'De la solicitud (no medida en el sitio)'
-          : v.origen === 'ajustado' ? 'Ajustada en el mapa'
-          : v.manual ? 'Escrita a mano' : '±' + v.precision + ' m') + '</span>'
+        (v.origen === 'ajustado' ? 'Ajustada en el mapa' : v.manual ? 'Escrita a mano' : '±' + v.precision + ' m') + '</span>'
       : '<span>Sin ubicación todavía</span>') + '</div>' +
     '<div class="fotos-botones">' +
     '<button type="button" class="btn-principal btn-chico" id="btn-gps">' + icono('ubicacion') + (hay ? 'Volver a medir' : 'Tomar ubicación') + '</button>' +
     '<button type="button" class="btn-texto btn-chico" id="btn-gps-manual">Escribirla a mano</button>' +
-    (solicitudConPunto() ? '<button type="button" class="btn-texto btn-chico" id="btn-gps-solicitud">Usar la de la solicitud</button>' : '') + '</div>' +
+    '</div>' +
     (hay ? '<div class="gps-mapa" id="gps-mapa"></div><p class="c-nota centro">Arrastre el punto si no quedó en el sitio exacto</p>' : '') +
     '<div class="gps-manual" id="gps-manual" hidden>' +
     '<label>Latitud<input inputmode="decimal" id="gps-lat" placeholder="4.8133"></label>' +
@@ -848,13 +840,6 @@ function enlazarGps(raiz) {
     medir(true);
   }
   $('#btn-gps-manual', raiz).addEventListener('click', () => { $('#gps-manual', raiz).hidden = false; });
-  const deSolicitud = $('#btn-gps-solicitud', raiz);
-  if (deSolicitud) deSolicitud.addEventListener('click', () => {
-    const s = APP.actual.solicitud;
-    d.ubicacion = { lat: +s.lat, lon: +s.lon, precision: null, manual: true, origen: 'solicitud' };
-    cambio(true);
-    ponerZona(d);
-  });
   $('#gps-manual-ok', raiz).addEventListener('click', () => {
     const lat = Esquema.aNumero($('#gps-lat', raiz).value), lon = Esquema.aNumero($('#gps-lon', raiz).value);
     if (!Esquema.coordenadaValida(lat, lon)) { toast('Esa coordenada no queda en Risaralda. Revise el orden y el signo menos.', 'error'); return; }

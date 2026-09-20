@@ -634,7 +634,9 @@ async function pintarMiniaturas(campo, cont) {
     '<div class="mini"><img src="' + f.dataUrl + '" alt=""><button type="button" class="mini-quitar" data-quitar="' + esc(f.clave) +
     '" aria-label="Quitar foto">×</button></div>').join('');
   $$('[data-quitar]', cont).forEach((b) => b.addEventListener('click', async () => {
-    if (!confirm('¿Quitar esta foto?')) return;
+    const r = await preguntar('¿Quitar esta foto?', 'Se borra de este celular. Puede tomar otra enseguida.',
+      [['si', 'Quitar', 'peligro'], ['no', 'Cancelar', '']]);
+    if (r !== 'si') return;
     await quitarFoto(b.dataset.quitar);
     APP.actual.datos[campo] = (APP.actual.datos[campo] || []).filter((k) => k !== b.dataset.quitar);
     cambio(true);

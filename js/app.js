@@ -137,7 +137,21 @@ function avisarVersionNueva(worker) {
   };
 }
 
-iniciar().catch((e) => {
+/**
+ * Si la app no arranca (base local dañada, navegador viejo), se muestra con
+ * el estilo de la app y no con el aviso gris del navegador: ese alert no se
+ * puede leer bien en el celular y se ve como un error de página.
+ */
+function mostrarFalloDeArranque(e) {
   console.error(e);
-  alert('No se pudo iniciar la aplicación: ' + e.message);
-});
+  const caja = document.createElement('div');
+  caja.className = 'fallo-arranque';
+  caja.innerHTML = '<div class="fallo-caja"><b>No se pudo abrir la aplicación</b>' +
+    '<p>' + esc(e && e.message ? e.message : String(e)) + '</p>' +
+    '<p class="fallo-nota">Cierre la app y vuelva a abrirla. Si sigue igual, avise a la DIGER.</p>' +
+    '<button type="button" class="btn-principal" id="btn-reintentar">Reintentar</button></div>';
+  document.body.appendChild(caja);
+  document.getElementById('btn-reintentar').addEventListener('click', () => location.reload());
+}
+
+iniciar().catch(mostrarFalloDeArranque);

@@ -164,13 +164,29 @@ function htmlEnviadas() {
       '<p class="t-lugar">' + esc([h.barrio, h.municipio].filter(Boolean).join(' · ')) + '</p>' +
       '<p class="t-desc">' + esc([fechaBonita(h.fecha), h.evaluador].filter(Boolean).join(' · ')) + '</p>' +
       (h.ficha_url ? '<div class="t-pie"><button type="button" class="btn-texto" data-pdf="' + esc(h.id) + '">' + icono('descargar') + 'PDF</button>' +
-        '<a class="btn-secundario btn-chico" target="_blank" rel="noopener" href="' + esc(h.ficha_url) + '">' + icono('documento') + 'Abrir ficha</a></div>' : '') +
+        '<a class="btn-secundario btn-chico" data-ficha target="_blank" href="' + esc(h.ficha_url) + '">' + icono('documento') + 'Abrir ficha</a></div>' : '') +
       '</article>');
   });
   return partes.length ? partes.join('') : vacioHtml('Aún no hay evaluaciones enviadas', 'Aquí verá las suyas y las del equipo después de sincronizar.');
 }
 
+/**
+ * Enlaces de ficha: se abren con window.open (sin rel=noopener) para que el
+ * botón "Volver" de la ficha pueda CERRAR esa pestaña. Con target="_blank" a
+ * secas el navegador no deja cerrarla y en el PC quedaban dos pestañas de la
+ * app abiertas.
+ */
+function enlazarFichasEnPestana() {
+  document.addEventListener('click', (ev) => {
+    const a = ev.target.closest && ev.target.closest('a[data-ficha]');
+    if (!a || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button) return;
+    ev.preventDefault();
+    window.open(a.href, '_blank');
+  });
+}
+
 function enlazarInicio() {
+  enlazarFichasEnPestana();
   $$('.pestana').forEach((b) => b.addEventListener('click', () => { APP.pestana = b.dataset.pestana; pintarInicio(); window.scrollTo(0, 0); }));
   $('#lista').addEventListener('click', async (ev) => {
     const t = ev.target.closest('button');

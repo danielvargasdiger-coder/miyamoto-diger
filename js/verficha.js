@@ -16,14 +16,28 @@
   var LOGOS = { sngrd: 'img/logo-sngrd.png', miyamoto: 'img/logo-usaid-miyamoto.png', pie: 'img/logos-pie.png', entidad: 'img/logo-app.png' };
   var $ = function (s) { return document.querySelector(s); };
 
-  /** Volver: a la pantalla anterior si la hay; si la ficha se abrió en una
-   *  pestaña nueva desde la app, a la app. Se enlaza de una, así el botón
-   *  sirve también cuando la ficha no carga. */
+  /**
+   * Volver. Se enlaza de una, así el botón sirve también cuando la ficha no
+   * carga. En el PC la ficha se abre en una pestaña nueva: esa se cierra,
+   * para no dejar dos pestañas de la app abiertas. Si el navegador no deja
+   * cerrarla, o si la ficha se abrió en la misma pestaña (celular), se
+   * devuelve a la pantalla anterior o a la app.
+   */
   function enlazarVolver() {
-    $('#btn-volver').onclick = function () {
+    $('#btn-volver').onclick = volver;
+  }
+
+  function volver() {
+    var atras = function () {
       if (history.length > 1) history.back();
       else location.href = './';
     };
+    if (window.opener && !window.opener.closed) {
+      window.close();
+      setTimeout(function () { if (!window.closed) atras(); }, 400);
+      return;
+    }
+    atras();
   }
 
   function mostrarError(texto) {
@@ -96,7 +110,10 @@
         var url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
         var a = document.createElement('a'); a.href = url; a.download = r.nombre; document.body.appendChild(a); a.click(); a.remove();
         setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
-      }).catch(function (e) { alert('No se pudo armar el PDF: ' + e.message); })
+      }).catch(function (e) {
+        $('#aviso-copia').textContent = 'No se pudo armar el PDF: ' + e.message;
+        setTimeout(function () { $('#aviso-copia').textContent = ''; }, 6000);
+      })
         .then(function () { b.disabled = false; t.textContent = 'PDF'; });
     };
     $('#barra').hidden = false;

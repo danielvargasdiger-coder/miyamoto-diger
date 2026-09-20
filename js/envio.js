@@ -39,7 +39,7 @@ async function enviarActual() {
     'Después de enviarla ya no se puede cambiar desde el celular. Las correcciones se hacen en la hoja de la DIGER.',
     [['si', 'Enviar', 'principal'], ['no', 'Volver', '']]);
   if (listo !== 'si') return;
-  clearTimeout(_autoguardado);        // un autoguardado pendiente volvería a crear el borrador ya enviado
+  cancelarAutoguardado();             // un autoguardado pendiente volvería a crear el borrador ya enviado
   cargando(true, 'Preparando el envío…');
   try {
     const { datos, fotos } = await datosParaEnviar(a.id, a.datos);
@@ -58,9 +58,11 @@ async function enviarActual() {
   enviarCola(true);
 }
 
-let _enviando = false;
+let _enviando = false, _repetir = false;
 async function enviarCola(silencioso) {
-  if (_enviando) return;
+  // La nueva no estaba en la lista que ya se recorre: se pide otra vuelta al terminar
+  // (antes esperaba hasta 10 minutos con el aviso "Enviando…").
+  if (_enviando) { _repetir = true; return; }
   _enviando = true;
   let bien = 0, mal = 0;
   try {
@@ -82,6 +84,7 @@ async function enviarCola(silencioso) {
     await recargarLocales();
     pintarInicio();
   }
+  if (_repetir) { _repetir = false; enviarCola(true); }
   if (!silencioso || bien) {
     if (bien) toast(bien === 1 ? 'Evaluación enviada' : bien + ' evaluaciones enviadas', 'ok');
     else if (mal && !silencioso) toast('No se pudo enviar. Se reintentará sola.', 'error');

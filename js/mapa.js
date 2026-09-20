@@ -59,7 +59,7 @@ async function abrirMapa() {
     MAPA.mapa = L.map('mapa', { zoomControl: true, attributionControl: true }).setView([4.8133, -75.6961], 13);
     // Sin {s}: el mismo cuadrito se guardaba hasta tres veces con a./b./c.
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19, attribution: '© OpenStreetMap'
+      maxZoom: 19, attribution: '© OpenStreetMap', crossOrigin: true
     }).addTo(MAPA.mapa);
     MAPA.capa = L.layerGroup().addTo(MAPA.mapa);
     MAPA.mapa.on('popupopen', (ev) => {

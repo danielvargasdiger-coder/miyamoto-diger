@@ -114,7 +114,9 @@ let _versionEsperando = null;
 function sePuedeActualizarSolo() {
   const foco = document.activeElement;
   const escribiendo = !!foco && /^(INPUT|TEXTAREA|SELECT)$/.test(foco.tagName);
-  return !APP.actual && !APP.sincronizando && !escribiendo && $('#vista-previa').hidden && $('#vista-firma').hidden;
+  // Ingreso y menú también: recargar borraba lo que estaban escribiendo en "Mis datos" o la firma.
+  return !APP.actual && !APP.sincronizando && !escribiendo && $('#vista-previa').hidden && $('#vista-firma').hidden &&
+    $('#vista-ingreso').hidden && $('#vista-menu').hidden;
 }
 
 /** Si hay una versión nueva esperando y el momento es bueno, se activa (la página se recarga sola). */

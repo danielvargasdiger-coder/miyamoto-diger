@@ -226,7 +226,7 @@ function pintarMapaTablero(lista) {
     ? conPunto.length + ' evaluaciones en el mapa.'
     : conPunto.length + ' de ' + lista.length + ' evaluaciones tienen ubicación.';
   const m = L.map(div, { zoomControl: true, scrollWheelZoom: false }).setView([4.8133, -75.6961], 12);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(m);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap', crossOrigin: true }).addTo(m);
   conPunto.forEach((e) => {
     const color = COLOR_PUNTO[COLOR_CLASIF[e.clasif] || 'sin'];
     L.circleMarker([+e.lat, +e.lon], { radius: 7, color: '#fff', weight: 2, fillColor: color, fillOpacity: 0.95 })

@@ -47,6 +47,12 @@ async function aplicarPerfil(idEval, d) {
 }
 
 async function abrirEvaluacion(opciones) {
+  // Desde el mapa se llega sin pasar por la lista: si esa visita ya tiene borrador se continúa,
+  // en vez de crear un segundo y terminar enviando dos evaluaciones de la misma solicitud.
+  if (opciones.solicitud && !opciones.borrador) {
+    const previo = borradorDeSolicitud(opciones.solicitud.id_solicitud);
+    if (previo) opciones = { borrador: previo };
+  }
   let registro;
   if (opciones.borrador) {
     registro = opciones.borrador;
@@ -86,7 +92,7 @@ function huboCambios() { return APP.actual && JSON.stringify(APP.actual.datos) !
  */
 async function salirDeFicha() {
   if (!APP.actual) return;
-  clearTimeout(_autoguardado);
+  cancelarAutoguardado();       // null, no solo cancelado: si la app pasa a segundo plano con el diálogo abierto no debe guardarse
   if (!huboCambios()) {
     if (APP.actual.esNueva) await borrarBorrador(APP.actual.id);
     return await cerrarVistaFicha();
@@ -108,7 +114,7 @@ async function salirDeFicha() {
  */
 async function cerrarVistaFicha() {
   soltarMapaPunto();
-  clearTimeout(_autoguardado);            // que un autoguardado pendiente no resucite un borrador descartado
+  cancelarAutoguardado();            // que un autoguardado pendiente no resucite un borrador descartado
   $('#vista-ficha').hidden = true;
   document.body.classList.remove('sin-scroll');
   APP.actual = null;
@@ -118,10 +124,32 @@ async function cerrarVistaFicha() {
 }
 
 // ---------------------------------------------------------------- BORRADORES
-let _autoguardado = null;
+let _autoguardado = null, _avisoFalloGuardado = false;
+function cancelarAutoguardado() { clearTimeout(_autoguardado); _autoguardado = null; }
 function programarAutoguardado() {
   clearTimeout(_autoguardado);
-  _autoguardado = setTimeout(() => guardarBorrador(true), 700);
+  _autoguardado = setTimeout(() => { _autoguardado = null; guardarBorrador(true).catch(falloAutoguardado); }, 700);
+}
+
+/** Antes el fallo era silencioso y el "Guardado 3:15" se quedaba mintiendo (celular sin espacio). */
+function falloAutoguardado() {
+  const aviso = $('#ficha-guardado');
+  if (aviso) aviso.textContent = 'NO se pudo guardar';
+  if (_avisoFalloGuardado) return;
+  _avisoFalloGuardado = true;
+  setTimeout(() => { _avisoFalloGuardado = false; }, 30000);
+  toast('No se pudo guardar el borrador (¿el celular está sin espacio?). Envíe la evaluación o libere espacio.', 'error');
+}
+
+/**
+ * Si se sale de la app (cámara, botón atrás, otra app, el sistema la cierra) con un cambio
+ * que aún esperaba sus 0,7 s, se guarda YA. Solo si el autoguardado está pendiente de verdad:
+ * después de enviar se cancela y no puede resucitar el borrador ya enviado.
+ */
+function vaciarAutoguardado() {
+  if (!APP.actual || !_autoguardado) return;
+  cancelarAutoguardado();
+  guardarBorrador(true).catch(falloAutoguardado);
 }
 
 async function guardarBorrador(silencioso) {
@@ -621,7 +649,7 @@ function enlazarSeccion(raiz) {
   const irMenu = $('[data-ir-menu]', raiz);
   if (irMenu) irMenu.addEventListener('click', abrirMenu);
 
-  if ($('[data-buscable]', raiz) && !Esquema.nombresZona(d).length) {
+  if ($('[data-buscable]', raiz) && !Esquema.nombresZona(d).length && !ZONAS.falló) {   // sin "falló" era un bucle sin fin
     cargarZonas().then(() => { if (APP.actual && APP.actual.datos === d) cambio(true); });
   }
 
@@ -656,7 +684,6 @@ async function abrirSelectorZona(campo) {
     '<div class="selector-buscar"><input type="search" id="selector-filtro" placeholder="Buscar…" autocomplete="off"></div>' +
     '<div class="selector-lista" id="selector-lista"></div>';
   document.body.appendChild(caja);
-  document.body.classList.add('sin-scroll');
 
   const lista = $('#selector-lista', caja);
   const pintar = (texto) => {
@@ -679,7 +706,7 @@ async function abrirSelectorZona(campo) {
       cambio(true);
     }));
   };
-  const cerrar = () => { caja.remove(); document.body.classList.remove('sin-scroll'); };
+  const cerrar = () => caja.remove();     // 'sin-scroll' es de la ficha, que sigue abierta debajo
   $('[data-cerrar]', caja).addEventListener('click', cerrar);
   $('#selector-filtro', caja).addEventListener('input', (ev) => pintar(ev.target.value));
   pintar('');
@@ -770,7 +797,7 @@ function pintarMapaPunto(raiz, d) {
   soltarMapaPunto();
   const punto = [Number(d.ubicacion.lat), Number(d.ubicacion.lon)];
   const mapa = L.map(caja, { zoomControl: true, attributionControl: false }).setView(punto, 17);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapa);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, crossOrigin: true }).addTo(mapa);
   // Pin dibujado: el paquete de Leaflet no trae marker-icon-2x.png y el pin
    // normal quedaba invisible en pantallas de celular (19/09).
   const pin = L.divIcon({ className: 'pin-ficha', html: '<span></span>', iconSize: [28, 28], iconAnchor: [14, 14] });
@@ -788,7 +815,7 @@ function pintarMapaPunto(raiz, d) {
   marca.on('dragend', () => { const p = marca.getLatLng(); mover(p.lat, p.lng); });
   mapa.on('click', (ev) => { marca.setLatLng(ev.latlng); mover(ev.latlng.lat, ev.latlng.lng); });
   MAPA_PUNTO = mapa;
-  setTimeout(() => mapa.invalidateSize(), 60);
+  setTimeout(() => { if (MAPA_PUNTO === mapa) mapa.invalidateSize(); }, 60);   // si ya lo soltaron, no tocarlo
 }
 
 function enlazarGps(raiz) {
@@ -816,7 +843,7 @@ function enlazarGps(raiz) {
         if (auto && d.ubicacion && d.ubicacion.lat != null) return;   // ya la puso a mano mientras medía
         d.ubicacion = { lat: m.lat, lon: m.lon, precision: m.precision };
         if (!Esquema.coordenadaValida(m.lat, m.lon)) toast('Ojo: esa ubicación queda fuera de Risaralda.', 'error');
-        cambio(true);
+        cambio(APP.actual.paso === 's3');     // en otra sección no se le quita el teclado a quien escribe
         ponerZona(d);
       },
       error: (e) => {
@@ -824,7 +851,7 @@ function enlazarGps(raiz) {
         if (auto) { dato.className = 'gps-dato'; dato.innerHTML = '<span>Sin ubicación todavía</span>'; return; }
         toast(e.code === 1 ? 'El celular no dio permiso de ubicación.' : 'No se pudo tomar la ubicación. Puede escribirla a mano.', 'error');
       }
-    }, !auto);
+    }, true);   // siempre medir de nuevo: la lectura guardada puede ser de la edificación anterior
   };
   btn.addEventListener('click', () => medir(false));
 
@@ -864,7 +891,7 @@ async function ponerZona(d) {
   } else {
     toast('Esa ubicación queda fuera de los barrios y veredas de Pereira: marque la zona.', 'error');
   }
-  cambio(true);
+  cambio(APP.actual.paso === 's3');
 }
 
 // ---------------------------------------------------------------- VISTA PREVIA
@@ -913,6 +940,8 @@ async function abrirFichaDemo(id) {
 }
 
 function iniciarEventosFicha() {
+  document.addEventListener('visibilitychange', () => { if (document.hidden) vaciarAutoguardado(); });
+  window.addEventListener('pagehide', vaciarAutoguardado);
   // Los enlaces de ficha de la demostración no salen de la app.
   document.addEventListener('click', (ev) => {
     const a = ev.target.closest && ev.target.closest('a[href^="#demo-ficha="]');

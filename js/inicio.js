@@ -340,6 +340,9 @@ function leerPerfil(form) {
 
 function mostrarIngreso() {
   $$('section.vista').forEach((v) => { v.hidden = true; });
+  $$('.selector-zona').forEach((v) => v.remove());     // el selector de barrio queda suelto si no
+  soltarMapaPunto();
+  document.body.classList.remove('sin-scroll');        // la ficha lo pone; sin quitarlo el ingreso no se desplaza
   $('#vista-ingreso').hidden = false;
   const pintar = () => {
     const form = $('#form-ingreso');
@@ -399,11 +402,21 @@ async function ingresar(ev) {
  * El código dejó de servir. Lo guardado en el celular NO se toca: borradores
  * y cola siguen ahí y se envían apenas entre con el código nuevo.
  */
-function pedirCodigoDeNuevo() {
-  if (!APP.perfil) return;
+async function pedirCodigoDeNuevo() {
+  // Al ingresar, APP.perfil es solo { codigo }: un código mal escrito no tiene nada que recordar
+  // (antes borraba el nombre, el documento y la firma guardados).
+  if (!APP.perfil || !APP.perfil.nombre) return;
   recordarPerfil(APP.perfil);
   APP.perfil = null;
   DB.guardarKV('perfil', null);
+  // Si estaba llenando una ficha: se guarda como borrador y se cierra, o el celular quedaba
+  // con la pantalla bloqueada sin poder llegar al botón Ingresar.
+  if (APP.actual) {
+    cancelarAutoguardado();
+    try { await guardarBorrador(true); } catch (e) { /* el borrador anterior sigue en el celular */ }
+    APP.actual = null;
+  }
+  cerrarMenu();
   toast('El código de acceso ya no es válido. Pídale el nuevo a la DIGER.', 'error');
   mostrarIngreso();
 }

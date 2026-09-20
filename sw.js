@@ -16,7 +16,7 @@
  */
 const ENTORNO = self.location.pathname.indexOf('/pruebas/') !== -1 ? 'pruebas' : 'prod';
 const PREFIJO = 'miyamoto-' + ENTORNO;
-const VERSION = PREFIJO + '-v31';
+const VERSION = PREFIJO + '-v33';
 
 /**
  * Cuadritos del mapa ya vistos. NO lleva el número de versión: borrarlos en
@@ -96,7 +96,10 @@ self.addEventListener('fetch', (ev) => {
         if (guardado) return guardado;
         return fetch(ev.request)
           .then((res) => { if (res && res.ok) cache.put(ev.request, res.clone()); return res; })
-          .catch(() => cache.match('./index.html'));
+          // Solo las PÁGINAS caen a index.html sin señal. Un archivo suelto que falla (zonas.json,
+          // una imagen) debe fallar de verdad: devolverle la página como si fuera el archivo hacía
+          // que r.json() reventara y la sección 3 se colgara.
+          .catch(() => (ev.request.mode === 'navigate' ? cache.match('./index.html') : Response.error()));
       })
     )
   );

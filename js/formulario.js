@@ -351,19 +351,19 @@ function errorVisible(c) {
   return e ? '<span class="error">' + esc(e) + '</span>' : '';
 }
 
-/** Barrio/Vereda: avisar cuando lo puso la app, para que se pueda corregir. */
-function notaDeCampo(c) {
-  const d = APP.actual.datos;
-  if (c.id === 'barrio_vereda' && d.zona_auto && d.zona_auto === d.barrio_vereda) {
-    return 'Tomado de la ubicación · puede cambiarlo';
-  }
-  return c.nota;
-}
-
 function cabeceraCampo(c) {
-  const nota = notaDeCampo(c);
+  const nota = c.nota;
   return '<div class="c-etiqueta">' + esc(c.etiqueta) + (c.req ? ' <span class="req" aria-label="obligatorio">*</span>' : '') +
     (nota ? ' <span class="c-nota">' + esc(nota) + '</span>' : '') + '</div>';
+}
+
+/**
+ * Barrio/Vereda y Zona quedan BLOQUEADOS cuando la ubicación cayó dentro de
+ * un polígono: ese dato no se discute (19/09). Solo se pueden escoger a mano
+ * cuando el punto no cruzó con ninguna capa, o cuando no hay ubicación.
+ */
+function fijadoPorUbicacion(c, d) {
+  return (c.id === 'barrio_vereda' || c.id === 'zona') && !!d.zona_auto && d.zona_auto === d.barrio_vereda;
 }
 
 function htmlCampo(c) {
@@ -374,6 +374,11 @@ function htmlCampo(c) {
 
   if (c.fijo) {
     return envoltura(cabeceraCampo(c) + '<div class="c-sistema c-fijo">' + icono('candado') + esc(Esquema.etiquetaDe(c.lista, c.fijo)) + '</div>');
+  }
+  if (fijadoPorUbicacion(c, d)) {
+    const texto = c.lista ? Esquema.etiquetaDe(c.lista, v) : v;
+    return envoltura(cabeceraCampo(Object.assign({}, c, { nota: 'Lo define la ubicación' })) +
+      '<div class="c-sistema c-fijo">' + icono('candado') + esc(texto) + '</div>');
   }
   switch (c.tipo) {
     case 'sistema':
@@ -757,7 +762,10 @@ function pintarMapaPunto(raiz, d) {
   const punto = [Number(d.ubicacion.lat), Number(d.ubicacion.lon)];
   const mapa = L.map(caja, { zoomControl: true, attributionControl: false }).setView(punto, 17);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapa);
-  const marca = L.marker(punto, { draggable: true, autoPan: true }).addTo(mapa);
+  // Pin dibujado: el paquete de Leaflet no trae marker-icon-2x.png y el pin
+   // normal quedaba invisible en pantallas de celular (19/09).
+  const pin = L.divIcon({ className: 'pin-ficha', html: '<span></span>', iconSize: [28, 28], iconAnchor: [14, 14] });
+  const marca = L.marker(punto, { draggable: true, autoPan: true, icon: pin, keyboard: false }).addTo(mapa);
   const mover = (lat, lon) => {
     if (!Esquema.coordenadaValida(lat, lon)) {
       toast('Esa ubicación queda fuera de Risaralda.', 'error');
@@ -779,9 +787,13 @@ function enlazarGps(raiz) {
   const btn = $('#btn-gps', raiz);
   const dato = $('#gps-dato', raiz);
   pintarMapaPunto(raiz, d);
-  btn.addEventListener('click', () => {
-    btn.disabled = true;
-    btn.innerHTML = icono('ubicacion') + 'Buscando…';
+  /**
+   * Medir con el GPS. `auto` = arranque solo al entrar a la sección 3: no
+   * molesta con avisos si el celular no da permiso y no pisa una ubicación
+   * que el evaluador ya haya puesto.
+   */
+  const medir = (auto) => {
+    if (!auto) { btn.disabled = true; btn.innerHTML = icono('ubicacion') + 'Buscando…'; }
     pedirUbicacion({
       progreso: (m, seg) => {
         dato.className = 'gps-dato ' + (m ? calidadGps(m.precision) : '');
@@ -792,6 +804,7 @@ function enlazarGps(raiz) {
       listo: (m) => {
         // Salió de la evaluación (o abrió otra) mientras el GPS buscaba: no se toca nada.
         if (!APP.actual || APP.actual.datos !== d) return;
+        if (auto && d.ubicacion && d.ubicacion.lat != null) return;   // ya la puso a mano mientras medía
         d.ubicacion = { lat: m.lat, lon: m.lon, precision: m.precision };
         if (!Esquema.coordenadaValida(m.lat, m.lon)) toast('Ojo: esa ubicación queda fuera de Risaralda.', 'error');
         cambio(true);
@@ -799,10 +812,24 @@ function enlazarGps(raiz) {
       },
       error: (e) => {
         btn.disabled = false; btn.innerHTML = icono('ubicacion') + 'Tomar ubicación';
+        if (auto) { dato.className = 'gps-dato'; dato.innerHTML = '<span>Sin ubicación todavía</span>'; return; }
         toast(e.code === 1 ? 'El celular no dio permiso de ubicación.' : 'No se pudo tomar la ubicación. Puede escribirla a mano.', 'error');
       }
-    }, true);
-  });
+    }, !auto);
+  };
+  btn.addEventListener('click', () => medir(false));
+
+  /**
+   * Arranque automático, UNA sola vez por evaluación (19/09): al entrar a la
+   * sección 3 el GPS empieza a medir para que se vaya afinando mientras el
+   * ingeniero llena lo demás. La marca `gps_auto` se guarda con el borrador,
+   * así al reabrirlo no vuelve a medir solo: para eso está "Tomar ubicación".
+   */
+  if (!d.gps_auto && !(d.ubicacion && d.ubicacion.lat != null)) {
+    d.gps_auto = true;
+    programarAutoguardado();
+    medir(true);
+  }
   $('#btn-gps-manual', raiz).addEventListener('click', () => { $('#gps-manual', raiz).hidden = false; });
   const deSolicitud = $('#btn-gps-solicitud', raiz);
   if (deSolicitud) deSolicitud.addEventListener('click', () => {

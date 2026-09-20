@@ -447,7 +447,7 @@ var Ficha = (function () {
     }
 
     if (grupos.length) {
-      h += '<div class="caja">' + titulo('REGISTRO FOTOGRÁFICO (MOVIMIENTO EN MASA Y DAÑOS DE LAS SECCIONES 9 Y 10)');
+      h += '<div class="caja abierta">' + titulo('REGISTRO FOTOGRÁFICO (MOVIMIENTO EN MASA Y DAÑOS DE LAS SECCIONES 9 Y 10)');
       grupos.forEach(function (g) {
         var filas = '';
         for (var k = 0; k < g.urls.length; k += 2) {
@@ -507,7 +507,12 @@ var Ficha = (function () {
     '.fotos img{max-width:100%;max-height:85mm}' +
     '.pie-foto{font-size:8pt;margin-top:2px}' +
     '.grupo-foto{page-break-inside:avoid;break-inside:avoid;margin-bottom:4px}' +
-    '.fotos img{max-height:78mm}' +
+    // El anexo de fotos puede seguir en la página siguiente: si la caja entera
+    // se negaba a partirse, el PDF quedaba con media página en blanco (19/09).
+    '.caja.abierta{page-break-inside:auto;break-inside:auto}' +
+    '.fotos tr{page-break-inside:avoid;break-inside:avoid}' +
+    '.subt{page-break-after:avoid;break-after:avoid}' +
+    '.fotos img{max-height:72mm}' +
     '.legal{padding:2px 6px 3px;font-size:6pt;line-height:1.2;color:#222;text-align:justify}' +
     '.legal-tit{font-size:6.6pt}' +
     '.sello{border-left:3px solid #1F4E79;background:#EEF3F8;padding:3px 7px;margin-bottom:3px;font-size:7.2pt;color:#333}' +

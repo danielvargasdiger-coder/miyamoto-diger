@@ -196,13 +196,13 @@ var Esquema = (function () {
     return c;
   }
   /**
-   * Foto opcional del elemento dañado: aparece al marcar M o S (máx. 3).
+   * Foto opcional del elemento dañado: aparece al marcar M o S (máx. 2).
    * Se había quitado el 18/09 junto con los esquemas y la DIGER pidió
    * volverla a tener; en la ficha van en un anexo al final.
    */
   function fotoDano(fila) {
     return {
-      id: 'foto_' + fila[0], etiqueta: 'Foto del daño — ' + fila[1], tipo: 'fotos', max: 3,
+      id: 'foto_' + fila[0], etiqueta: 'Foto del daño — ' + fila[1], tipo: 'fotos', max: 2,
       compacto: true, si: { campo: 'dano_' + fila[0], es: ['m', 's'] }
     };
   }

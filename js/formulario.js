@@ -105,6 +105,7 @@ async function salirDeFicha() {
  * (lo encontraron las pruebas del 18/09).
  */
 async function cerrarVistaFicha() {
+  soltarMapaPunto();
   clearTimeout(_autoguardado);            // que un autoguardado pendiente no resucite un borrador descartado
   $('#vista-ficha').hidden = true;
   document.body.classList.remove('sin-scroll');
@@ -143,6 +144,7 @@ async function borrarBorrador(id) {
 
 // ---------------------------------------------------------------- NAVEGACIÓN
 function irAPaso(paso, campoDestino) {
+  soltarMapaPunto();                      // el mapita del paso anterior ya no existe
   APP.actual.paso = paso;
   pintarIndice();
   const cuerpo = $('#ficha-cuerpo');
@@ -458,12 +460,15 @@ function htmlGps(v) {
   return '<div class="gps">' +
     '<div class="gps-dato ' + calidad + '" id="gps-dato">' + (hay
       ? '<b>' + Number(v.lat).toFixed(6) + ', ' + Number(v.lon).toFixed(6) + '</b><span>' +
-        (v.origen === 'solicitud' ? 'De la solicitud (no medida en el sitio)' : v.manual ? 'Escrita a mano' : '±' + v.precision + ' m') + '</span>'
+        (v.origen === 'solicitud' ? 'De la solicitud (no medida en el sitio)'
+          : v.origen === 'ajustado' ? 'Ajustada en el mapa'
+          : v.manual ? 'Escrita a mano' : '±' + v.precision + ' m') + '</span>'
       : '<span>Sin ubicación todavía</span>') + '</div>' +
     '<div class="fotos-botones">' +
     '<button type="button" class="btn-principal btn-chico" id="btn-gps">' + icono('ubicacion') + (hay ? 'Volver a medir' : 'Tomar ubicación') + '</button>' +
     '<button type="button" class="btn-texto btn-chico" id="btn-gps-manual">Escribirla a mano</button>' +
     (solicitudConPunto() ? '<button type="button" class="btn-texto btn-chico" id="btn-gps-solicitud">Usar la de la solicitud</button>' : '') + '</div>' +
+    (hay ? '<div class="gps-mapa" id="gps-mapa"></div><p class="c-nota centro">Arrastre el punto si no quedó en el sitio exacto</p>' : '') +
     '<div class="gps-manual" id="gps-manual" hidden>' +
     '<label>Latitud<input inputmode="decimal" id="gps-lat" placeholder="4.8133"></label>' +
     '<label>Longitud<input inputmode="decimal" id="gps-lon" placeholder="-75.6961"></label>' +
@@ -731,10 +736,49 @@ async function pintarMiniaturas(campo, cont) {
   }));
 }
 
+/**
+ * Mapita de la sección 3: el evaluador ve dónde quedó el punto y lo corrige
+ * arrastrándolo (o tocando el mapa). Sin señal los cuadritos no cargan, pero
+ * el punto se puede mover igual; los que ya vio quedan guardados (sw.js).
+ */
+let MAPA_PUNTO = null;
+
+/** Suelta el mapita: si no, queda un Leaflet vivo por cada paso que se abre. */
+function soltarMapaPunto() {
+  if (!MAPA_PUNTO) return;
+  try { MAPA_PUNTO.remove(); } catch (e) { /* ya no estaba */ }
+  MAPA_PUNTO = null;
+}
+
+function pintarMapaPunto(raiz, d) {
+  const caja = $('#gps-mapa', raiz);
+  if (!caja || typeof L === 'undefined' || !d.ubicacion || d.ubicacion.lat == null) return;
+  soltarMapaPunto();
+  const punto = [Number(d.ubicacion.lat), Number(d.ubicacion.lon)];
+  const mapa = L.map(caja, { zoomControl: true, attributionControl: false }).setView(punto, 17);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapa);
+  const marca = L.marker(punto, { draggable: true, autoPan: true }).addTo(mapa);
+  const mover = (lat, lon) => {
+    if (!Esquema.coordenadaValida(lat, lon)) {
+      toast('Esa ubicación queda fuera de Risaralda.', 'error');
+      marca.setLatLng(punto);
+      return;
+    }
+    d.ubicacion = { lat: +lat.toFixed(6), lon: +lon.toFixed(6), precision: null, manual: true, origen: 'ajustado' };
+    cambio(true);                      // la coordenada nueva a la vista
+    ponerZona(d);                      // y de paso recalcula barrio/vereda y zona
+  };
+  marca.on('dragend', () => { const p = marca.getLatLng(); mover(p.lat, p.lng); });
+  mapa.on('click', (ev) => { marca.setLatLng(ev.latlng); mover(ev.latlng.lat, ev.latlng.lng); });
+  MAPA_PUNTO = mapa;
+  setTimeout(() => mapa.invalidateSize(), 60);
+}
+
 function enlazarGps(raiz) {
   const d = APP.actual.datos;
   const btn = $('#btn-gps', raiz);
   const dato = $('#gps-dato', raiz);
+  pintarMapaPunto(raiz, d);
   btn.addEventListener('click', () => {
     btn.disabled = true;
     btn.innerHTML = icono('ubicacion') + 'Buscando…';
@@ -782,20 +826,16 @@ function enlazarGps(raiz) {
  * No pisa lo que el evaluador haya escrito a mano.
  */
 async function ponerZona(d) {
-  const antesBarrio = d.barrio_vereda;
+  const antes = d.barrio_vereda;
   const cambió = await completarZonaPorUbicacion(d);
   if (!APP.actual || APP.actual.datos !== d) return;     // cerró la ficha mientras tanto
-  if (cambió) {
-    toast((d.zona === 'rural' ? 'Vereda' : 'Barrio') + ': ' + d.barrio_vereda + (antesBarrio ? ' (antes: ' + antesBarrio + ')' : ''));
-    cambio(true);
-    return;
+  if (!cambió) return;
+  if (d.barrio_vereda) {
+    toast((d.zona === 'rural' ? 'Vereda' : 'Barrio') + ': ' + d.barrio_vereda + (antes ? ' (antes: ' + antes + ')' : ''));
+  } else {
+    toast('Esa ubicación queda fuera de los barrios y veredas de Pereira: marque la zona.', 'error');
   }
-  // Escribió el barrio a mano: no se le pisa, pero si la ubicación cae en otro
-  // se lo avisamos, para que no quede un dato que no corresponde al punto.
-  const r = await buscarZonaDePunto(d.ubicacion.lat, d.ubicacion.lon);
-  if (!APP.actual || APP.actual.datos !== d || !r) return;
-  if (Esquema.normalizarTexto(r.nombre) === Esquema.normalizarTexto(d.barrio_vereda || '')) return;
-  toast('Esa ubicación cae en ' + r.nombre + ' (' + (r.zona === 'rural' ? 'rural' : 'urbano') + '). Cambie el barrio si corresponde.');
+  cambio(true);
 }
 
 // ---------------------------------------------------------------- VISTA PREVIA

@@ -108,21 +108,27 @@ async function buscarZonaDePunto(lat, lon) {
 }
 
 /**
- * Llena Zona y Barrio/Vereda con la ubicación recién tomada. Es una AYUDA:
- * lo escrito a mano por el evaluador no se pisa, y lo que ponga la app se
- * puede cambiar. Devuelve true si cambió algo (para volver a dibujar).
+ * Zona y Barrio/Vereda SIEMPRE salen de la ubicación: al cambiarla se
+ * recalculan (pedido de la DIGER, 19/09). Si el punto queda fuera de la
+ * capa, las dos casillas quedan en blanco: así un vacío significa siempre
+ * lo mismo, "la capa no cubre ese punto", y sirve para corregirla.
+ * Devuelve true si cambió algo (para volver a dibujar).
  */
-async function completarZonaPorUbicacion(datos, forzar) {
+async function completarZonaPorUbicacion(datos) {
   const u = datos.ubicacion;
   if (!u || u.lat == null) return false;
   const r = await buscarZonaDePunto(u.lat, u.lon);
-  if (!r) { delete datos.zona_auto; return false; }
-  const escrito = datos.barrio_vereda && datos.barrio_vereda !== datos.zona_auto;
-  if (escrito && !forzar) return false;
+  if (!r) {
+    const habia = !!(datos.barrio_vereda || datos.zona);
+    delete datos.barrio_vereda;
+    delete datos.zona;
+    delete datos.zona_auto;
+    return habia;
+  }
   const cambió = datos.barrio_vereda !== r.nombre || datos.zona !== r.zona;
   datos.barrio_vereda = r.nombre;
   datos.zona = r.zona;
-  datos.zona_auto = r.nombre;          // marca de "lo puso la app"
+  datos.zona_auto = r.nombre;          // marca de "lo puso la ubicación"
   return cambió;
 }
 

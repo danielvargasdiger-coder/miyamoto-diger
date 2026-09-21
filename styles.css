@@ -173,8 +173,6 @@ body.modo-demo, body.entorno-pruebas { --alto-cinta: 22px; padding-top: var(--al
 .credito b { font-size: 1.12rem; font-weight: 800; color: var(--azul); letter-spacing: .01em; }
 .credito em { font-style: normal; font-size: .85rem; font-weight: 600; color: var(--inst-verde); }
 .version-app { text-align: center; font-size: .68rem; color: #9aa8b4; margin: 2px 0 0; }
-.enlace-demo { display: block; text-align: center; margin: 14px 0 0; color: var(--azul); font-weight: 600; font-size: .92rem; }
-.enlace-demo[hidden] { display: none; }
 .cinta-entorno a { color: #fff; text-decoration: underline; }
 .p-alta { background: #fde2e2; color: #a1000b; } .p-media { background: #fff1d6; color: #8a4b00; } .p-baja { background: #e3f2e5; color: #1b5e20; }
 .etiqueta-borrador, .etiqueta-cola { display: inline-flex; align-items: center; gap: 4px; font-size: .78rem; font-weight: 700; color: #8a4b00; }

@@ -356,7 +356,6 @@ function mostrarIngreso() {
   firmaPendiente = null;
   pintarFirmas(APP.perfilAnterior && APP.perfilAnterior.firma);
   $('#modo-demo').hidden = !CONFIG.DEMO;
-  $('#enlace-demo').hidden = CONFIG.DEMO;
   if (CONFIG.DEMO_CON_DATOS) {
     $('#modo-demo').textContent = 'Demostración con datos de ejemplo: todo es inventado y nada sale de este celular. Los datos ya están llenos: toque «Ingresar».';
     if (!$('#form-ingreso').elements.codigo.value) $('#form-ingreso').elements.codigo.value = 'DEMO';

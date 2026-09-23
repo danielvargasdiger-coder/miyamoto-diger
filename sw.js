@@ -16,7 +16,7 @@
  */
 const ENTORNO = self.location.pathname.indexOf('/pruebas/') !== -1 ? 'pruebas' : 'prod';
 const PREFIJO = 'miyamoto-' + ENTORNO;
-const VERSION = PREFIJO + '-v34';
+const VERSION = PREFIJO + '-v36';
 
 /**
  * Cuadritos del mapa ya vistos. NO lleva el número de versión: borrarlos en

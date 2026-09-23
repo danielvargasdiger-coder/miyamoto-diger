@@ -513,7 +513,7 @@ function htmlGps(v) {
     (hay ? '<div class="gps-mapa" id="gps-mapa"></div><p class="c-nota centro">Arrastre el punto si no quedó en el sitio exacto</p>' : '') +
     '<div class="gps-manual" id="gps-manual" hidden>' +
     '<label>Latitud<input inputmode="decimal" id="gps-lat" placeholder="4.8133"></label>' +
-    '<label>Longitud<input inputmode="decimal" id="gps-lon" placeholder="-75.6961"></label>' +
+    '<label>Longitud<span class="campo-signo"><b>−</b><input inputmode="decimal" id="gps-lon" placeholder="75.6961"></span></label>' +
     '<button type="button" class="btn-secundario btn-chico" id="gps-manual-ok">Usar</button></div></div>';
 }
 
@@ -868,8 +868,12 @@ function enlazarGps(raiz) {
   }
   $('#btn-gps-manual', raiz).addEventListener('click', () => { $('#gps-manual', raiz).hidden = false; });
   $('#gps-manual-ok', raiz).addEventListener('click', () => {
-    const lat = Esquema.aNumero($('#gps-lat', raiz).value), lon = Esquema.aNumero($('#gps-lon', raiz).value);
-    if (!Esquema.coordenadaValida(lat, lon)) { toast('Esa coordenada no queda en Risaralda. Revise el orden y el signo menos.', 'error'); return; }
+    const lat = Esquema.aNumero($('#gps-lat', raiz).value);
+    let lon = Esquema.aNumero($('#gps-lon', raiz).value);
+    // Risaralda siempre es longitud negativa: se fuerza el signo, escriba o no el "-"
+    // (el teclado numérico del celular no lo tiene; desde PC si lo escribe también queda bien).
+    if (lon !== null) lon = -Math.abs(lon);
+    if (!Esquema.coordenadaValida(lat, lon)) { toast('Esa coordenada no queda en Risaralda. Revise los números.', 'error'); return; }
     d.ubicacion = { lat, lon, precision: null, manual: true };
     cambio(true);
     ponerZona(d);

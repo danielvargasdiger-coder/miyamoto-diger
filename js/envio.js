@@ -92,6 +92,26 @@ async function enviarCola(silencioso) {
   return { bien, mal };
 }
 
+/**
+ * Reintenta una llamada que falló POR LA RED (señal intermitente en campo),
+ * esperando un poco más cada vez. Un error del servidor no se reintenta: si
+ * dijo que no, insistir no cambia nada.
+ *
+ * (23/09) Antes, una sola foto que no respondía tumbaba el envío entero y la
+ * evaluación quedaba en "RECIBIENDO FOTOS" hasta 10 minutos después. Repetir
+ * es seguro: el servidor reconoce la foto por su nombre y no la duplica.
+ */
+async function conReintentoDeRed(fn, avisar) {
+  for (let intento = 1; ; intento++) {
+    try { return await fn(); }
+    catch (e) {
+      if (e.delServidor || intento >= 3) throw e;
+      if (avisar) avisar(intento);
+      await new Promise((r) => setTimeout(r, intento * 2000));
+    }
+  }
+}
+
 async function enviarUna(item) {
   item.error = 'Enviando…';
   await DB.guardar('cola', item);
@@ -113,16 +133,28 @@ async function enviarUna(item) {
     if (!reg) { perdidas.push(f.nombre); continue; }
     item.error = 'Subiendo foto ' + n + ' de ' + item.fotos.length + '…';
     pintarInicio();
-    await api('subir_foto', {
-      id: item.id, campo: f.campo, nombre: f.nombre, tipo: reg.tipo,
-      base64: reg.dataUrl.split(',')[1]
-    }, 90000);
+    await conReintentoDeRed(
+      () => api('subir_foto', {
+        id: item.id, campo: f.campo, nombre: f.nombre, tipo: reg.tipo,
+        base64: reg.dataUrl.split(',')[1]
+      }, 45000),
+      (intento) => {
+        item.error = 'Foto ' + n + ' de ' + item.fotos.length + ': reintento ' + intento + '…';
+        pintarInicio();
+      }
+    );
     item.subidas.push(f.nombre);
     await DB.guardar('cola', item);
   }
 
   if (perdidas.length) console.warn('Fotos que ya no estaban en el celular:', item.id, perdidas);
-  const cierre = await api('cerrar_evaluacion', { id: item.id, fotos: item.fotos.map((f) => f.nombre).filter((x) => perdidas.indexOf(x) === -1) });
+  // El cierre es justo donde se quedaban trabadas ("RECIBIENDO FOTOS"): con
+  // reintento, un tropiezo de señal aquí ya no deja la evaluación a medias.
+  item.error = 'Cerrando el envío…';
+  pintarInicio();
+  const cierre = await conReintentoDeRed(() => api('cerrar_evaluacion', {
+    id: item.id, fotos: item.fotos.map((f) => f.nombre).filter((x) => perdidas.indexOf(x) === -1)
+  }));
   if (cierre.faltan && cierre.faltan.length) {
     // El servidor no tiene todas: se queda en cola y el próximo intento
     // sube solo las que faltan (guardar_evaluacion dice cuáles ya están).

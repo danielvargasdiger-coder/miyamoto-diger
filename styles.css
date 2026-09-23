@@ -376,6 +376,19 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .gps-dato.malo { background: var(--rojo-fondo); border-color: var(--rojo); }
 .gps-manual { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; margin-top: 8px; }
 .gps-manual label { font-size: .85rem; }
+/* Aviso de evaluaciones que llevan horas sin poder salir. Se ve, pero no tapa ni interrumpe. */
+.aviso-pendientes { display: flex; align-items: center; gap: 10px; margin: 10px 12px 0; padding: 10px 12px;
+  background: #fff6e5; border: 1.5px solid var(--inst-amarillo, #e8a33d); border-radius: var(--radio); }
+.aviso-pendientes .ico { width: 22px; height: 22px; flex: none; color: #b5730a; }
+.aviso-pendientes div { flex: 1; min-width: 0; }
+.aviso-pendientes b { display: block; font-size: .95rem; }
+.aviso-pendientes span { display: block; font-size: .82rem; color: var(--texto-suave); }
+.aviso-pendientes button { flex: none; }
+@media (max-width: 480px) {
+  .aviso-pendientes { flex-wrap: wrap; }
+  .aviso-pendientes button { width: 100%; }
+}
+
 .campo-signo { display: flex; align-items: center; min-height: 48px; border: 1.5px solid var(--borde); border-radius: 8px; background: #fff; }
 .campo-signo:focus-within { border-color: var(--azul); box-shadow: 0 0 0 3px rgba(11,79,108,.18); }
 .campo-signo b { padding-left: 12px; color: var(--texto-suave); font-size: 16px; }

@@ -54,8 +54,21 @@ async function enviarActual() {
   } finally { cargando(false); }
   APP.pestana = 'enviadas';
   await cerrarVistaFicha();
-  toast(navigator.onLine ? 'Enviando…' : 'Sin señal: quedó en cola y se enviará sola.');
-  enviarCola(true);
+  if (!navigator.onLine) {
+    toast('Sin señal: quedó en cola y se enviará sola.');
+    enviarCola(true);
+    return;
+  }
+  // La app NO se bloquea: el técnico ya puede seguir con la siguiente casa. Solo se
+  // espera un momento para decirle en qué quedó. Con buena señal alcanza a salir y ve
+  // "Evaluación enviada"; si no, se entera de que sigue sola y no se queda con la duda.
+  toast('Enviando…');
+  const envio = enviarCola(true);
+  const termino = await Promise.race([
+    envio.then(() => true),
+    new Promise((r) => setTimeout(() => r(false), 3000))
+  ]);
+  if (!termino) toast('Se sigue enviando sola. Puede continuar con la siguiente.');
 }
 
 let _enviando = false, _repetir = false;

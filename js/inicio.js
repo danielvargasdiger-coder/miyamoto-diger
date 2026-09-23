@@ -64,7 +64,43 @@ function pintarInicio() {
   if (APP.pestana === 'porEvaluar') lista.innerHTML = htmlPorEvaluar(pend);
   else if (APP.pestana === 'borradores') lista.innerHTML = htmlBorradores();
   else lista.innerHTML = htmlEnviadas();
+  pintarAvisoPendientes();
   pintarConexion();
+}
+
+/**
+ * Evaluaciones que llevan horas en la cola sin poder salir. El contador de la
+ * barra es discreto y se pasa por alto: si el técnico termina la jornada sin
+ * darse cuenta, cree que envió y no envió. No interrumpe el trabajo (no es una
+ * ventana), solo se ve mientras haya algo pendiente de verdad.
+ */
+const HORAS_PARA_AVISAR = 6;
+
+function colaAtrasada() {
+  const corte = Date.now() - HORAS_PARA_AVISAR * 3600000;
+  return APP.cola.filter((c) => {
+    const t = new Date(c.encolado || 0).getTime();
+    return t && t < corte;
+  });
+}
+
+function pintarAvisoPendientes() {
+  const caja = $('#aviso-pendientes');
+  if (!caja) return;
+  const viejas = colaAtrasada();
+  caja.hidden = !viejas.length;
+  if (!viejas.length) return;
+  const n = viejas.length, una = n === 1;
+  caja.innerHTML = icono('alerta') +
+    '<div><b>' + n + (una ? ' evaluación sin enviar' : ' evaluaciones sin enviar') + '</b>' +
+    '<span>' + (una ? 'Lleva horas esperando señal. Déjela subir' : 'Llevan horas esperando señal. Déjelas subir') +
+    ' antes de terminar la jornada.</span></div>' +
+    '<button type="button" class="btn-secundario btn-chico" id="btn-aviso-enviar">Intentar ahora</button>';
+  $('#btn-aviso-enviar', caja).addEventListener('click', () => {
+    if (!navigator.onLine) { toast('El celular sigue sin señal. Se enviarán solas apenas haya.', 'error'); return; }
+    toast('Enviando…');
+    enviarCola(false);
+  });
 }
 
 function vacioHtml(titulo, texto) {

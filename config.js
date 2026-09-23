@@ -67,6 +67,14 @@ var CONFIG = (function () {
 
     /** GPS: igual que taludes — escucha y se queda con la mejor lectura. */
     GPS_PRECISION_OBJETIVO: 8,
-    GPS_SEGUNDOS_MAX: 20
+    GPS_SEGUNDOS_MAX: 20,
+
+    /**
+     * Error máximo para dar una ubicación por buena, en metros (23/09).
+     * Se evalúa vivienda por vivienda: un frente urbano son 6-10 m, así que más
+     * de 20 m ya puede señalar la casa vecina. Con esto la medición automática
+     * descarta lo que no sirve, y al enviar se pregunta si quedó peor.
+     */
+    PRECISION_MINIMA: 20
   };
 })();

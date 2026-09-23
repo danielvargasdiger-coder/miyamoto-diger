@@ -271,6 +271,13 @@ body.modo-demo, body.entorno-pruebas { --alto-cinta: 22px; padding-top: var(--al
   background: var(--rojo); border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.45); cursor: grab; }
 .pin-ficha:active span { cursor: grabbing; transform: scale(1.1); }
 
+/* Ubicación que no identifica la vivienda: se avisa AQUÍ, con el mapa debajo para corregir. */
+.aviso-precision { display: flex; gap: 10px; align-items: flex-start; margin: 8px 0 0; padding: 10px 12px;
+  background: #fdeaea; border: 1.5px solid var(--error); border-radius: var(--radio); }
+.aviso-precision .ico { width: 22px; height: 22px; flex: none; color: var(--error); margin-top: 1px; }
+.aviso-precision b { display: block; font-size: .95rem; color: var(--error); }
+.aviso-precision span { display: block; font-size: .85rem; line-height: 1.4; }
+
 /* Mapita de la ubicación: pequeño, solo para ver y corregir el punto. */
 .gps-mapa { height: 200px; margin: 8px 0 2px; border-radius: 10px; border: 1px solid var(--borde); overflow: hidden; z-index: 0; }
 .gps-mapa .leaflet-container { background: #e9eef1; }

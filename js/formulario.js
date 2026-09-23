@@ -501,16 +501,24 @@ function htmlEjemploMasa() {
 function htmlGps(v) {
   const hay = v && v.lat != null;
   const calidad = hay ? calidadGps(v.precision) : '';
+  // El aviso va AQUÍ, no al enviar (23/09): al final el evaluador ya se fue de la casa
+  // y mover el pin desde tres cuadras no arregla nada. Aquí está parado en la vivienda
+  // y tiene el mapa debajo para corregirlo de una.
+  const imprecisa = hay && v.precision != null && v.precision > CONFIG.PRECISION_MINIMA;
   return '<div class="gps">' +
     '<div class="gps-dato ' + calidad + '" id="gps-dato">' + (hay
       ? '<b>' + Number(v.lat).toFixed(6) + ', ' + Number(v.lon).toFixed(6) + '</b><span>' +
         (v.origen === 'ajustado' ? 'Ajustada en el mapa' : v.manual ? 'Escrita a mano' : '±' + v.precision + ' m') + '</span>'
       : '<span>Sin ubicación todavía</span>') + '</div>' +
+    (imprecisa ? '<div class="aviso-precision">' + icono('alerta') +
+      '<div><b>Esta ubicación puede señalar otra vivienda</b>' +
+      '<span>Con ±' + v.precision + ' m de error puede caer en la casa vecina. Arrastre el punto del mapa hasta la vivienda, o vuelva a medir desde afuera.</span></div></div>' : '') +
     '<div class="fotos-botones">' +
     '<button type="button" class="btn-principal btn-chico" id="btn-gps">' + icono('ubicacion') + (hay ? 'Volver a medir' : 'Tomar ubicación') + '</button>' +
     '<button type="button" class="btn-texto btn-chico" id="btn-gps-manual">Escribirla a mano</button>' +
     '</div>' +
-    (hay ? '<div class="gps-mapa" id="gps-mapa"></div><p class="c-nota centro">Arrastre el punto si no quedó en el sitio exacto</p>' : '') +
+    (hay ? '<div class="gps-mapa" id="gps-mapa"></div><p class="c-nota centro">' +
+      (imprecisa ? 'Arrastre el punto hasta la vivienda' : 'Arrastre el punto si no quedó en el sitio exacto') + '</p>' : '') +
     '<div class="gps-manual" id="gps-manual" hidden>' +
     '<label>Latitud<input inputmode="decimal" id="gps-lat" placeholder="4.8133"></label>' +
     '<label>Longitud<span class="campo-signo"><b>−</b><input inputmode="decimal" id="gps-lon" placeholder="75.6961"></span></label>' +
@@ -841,6 +849,16 @@ function enlazarGps(raiz) {
         // Salió de la evaluación (o abrió otra) mientras el GPS buscaba: no se toca nada.
         if (!APP.actual || APP.actual.datos !== d) return;
         if (auto && d.ubicacion && d.ubicacion.lat != null) return;   // ya la puso a mano mientras medía
+        // La medición automática NO guarda una ubicación que no identifique la vivienda
+        // (23/09): bajo placa el celular se conforma con la antena celular, ±2000 m, que
+        // cae en otro barrio. Como el evaluador no está mirando, entraba sola a la base.
+        // Cuando él la toma a propósito sí se guarda, con aviso: manda él.
+        if (auto && m.precision > CONFIG.PRECISION_MINIMA) {
+          dato.className = 'gps-dato';
+          dato.innerHTML = '<span>Sin ubicación todavía</span>';
+          toast('No se consiguió una ubicación precisa (±' + m.precision + ' m). Tome la ubicación, mejor desde afuera.', 'error');
+          return;
+        }
         d.ubicacion = { lat: m.lat, lon: m.lon, precision: m.precision };
         if (!Esquema.coordenadaValida(m.lat, m.lon)) toast('Ojo: esa ubicación queda fuera de Risaralda.', 'error');
         cambio(APP.actual.paso === 's3');     // en otra sección no se le quita el teclado a quien escribe

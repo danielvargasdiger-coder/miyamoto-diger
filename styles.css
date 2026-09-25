@@ -162,9 +162,6 @@ body.modo-demo, body.entorno-pruebas { --alto-cinta: 22px; padding-top: var(--al
 .buscador input:focus { outline: none; border-color: var(--azul); box-shadow: 0 0 0 3px var(--azul-claro); }
 .buscador input::-webkit-search-cancel-button { display: none; }
 .buscador .btn-icono { position: absolute; right: 20px; width: 36px; height: 36px; color: var(--texto-suave); background: transparent; }
-.rango-fechas { display: flex; flex-wrap: wrap; gap: 8px 14px; }
-.rango-fechas label { display: flex; flex-direction: column; font-size: .82rem; color: var(--texto-suave); font-weight: 600; }
-.rango-fechas input { min-height: 40px; border: 1.5px solid var(--borde); border-radius: 8px; padding: 4px 8px; font: inherit; color: var(--texto); background: #fff; }
 /* Crédito: ingreso y menú */
 .credito { margin: 22px auto 4px; padding-top: 14px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1px;
   border-top: 3px solid transparent; border-image: linear-gradient(90deg, var(--inst-verde) 0 33%, var(--inst-amarillo) 33% 66%, var(--inst-rojo) 66%) 1;
@@ -541,19 +538,35 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .pop-desc { color: var(--texto-suave); }
 
 .tablero { max-width: var(--ancho-app); margin: 0 auto; padding: 12px 16px 40px; display: grid; gap: 14px; }
-.tablero-filtros { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-end; }
-/* Evaluador y barrio/vereda: botón que abre la lista de varios (24/09). */
-.filtro-multi { display: flex; align-items: center; gap: 8px; min-height: 44px; background: #fff;
-  border: 1.5px solid var(--borde); border-radius: 8px; padding: 6px 10px; font: inherit; color: var(--texto); cursor: pointer; }
-.filtro-multi.puesto { border-color: var(--azul); background: var(--azul-claro); }
-.filtro-multi .filtro-et { font-size: .78rem; color: var(--texto-suave); }
-.filtro-multi .filtro-val { font-weight: 600; }
-.filtro-multi .ico { width: 18px; height: 18px; color: var(--texto-suave); }
+/* Compactos y TODOS iguales: son de consulta rápida, no un formulario (24/09).
+   Las fechas y los selectores comparten caja, alto y borde; mezclados se veían
+   desparejos en el PC. */
+.tablero-filtros { display: flex; flex-wrap: wrap; gap: 6px; align-items: stretch; margin-bottom: 10px; }
+.filtro-caja { display: flex; align-items: center; gap: 6px; height: 38px; background: #fff;
+  border: 1.5px solid var(--borde); border-radius: 8px; padding: 0 10px; font: inherit; font-size: .86rem;
+  color: var(--texto); cursor: pointer; white-space: nowrap; }
+.filtro-caja.puesto { border-color: var(--azul); background: var(--azul-claro); }
+.filtro-caja .filtro-et { font-size: .72rem; color: var(--texto-suave); }
+.filtro-caja .filtro-val { font-weight: 600; }
+.filtro-caja .ico { width: 15px; height: 15px; color: var(--texto-suave); flex: none; }
+/* El campo de fecha va desnudo dentro de la caja: la caja pone el borde. */
+.filtro-caja input[type="date"] { width: auto; min-height: 0; height: 100%; border: 0; border-radius: 0;
+  padding: 0; background: transparent; font-size: .86rem; font-weight: 600; color: var(--texto); }
+.filtro-caja input[type="date"]:focus { outline: none; box-shadow: none; }
+.filtro-caja:focus-within { border-color: var(--azul); box-shadow: 0 0 0 3px rgba(11,79,108,.18); }
+.tablero-filtros .btn-texto { align-self: center; }
 /* El mapa manda: a todo el ancho, que es como se aprovecha que Pereira es larga. */
 .panel-mapa { background: #fff; border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px 14px; margin-bottom: 14px; }
 .panel-mapa h3 { font-size: 1rem; margin-top: 0; }
-.mapa-pie { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
-.mapa-pie p { margin: 0; }
+.mapa-marco { position: relative; }
+/* Agrandar: un control del mapa, no una barra. Discreto, en la esquina. */
+.btn-agrandar { position: absolute; top: 8px; right: 8px; z-index: 5; width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+  background: rgba(255,255,255,.94); border: 1px solid var(--borde); border-radius: 7px;
+  color: var(--texto); cursor: pointer; box-shadow: 0 1px 3px rgba(16,32,44,.2); }
+.btn-agrandar:hover { background: #fff; border-color: var(--azul); color: var(--azul); }
+.btn-agrandar .ico { width: 17px; height: 17px; }
+.panel-mapa .c-nota { margin: 8px 0 0; }
 .mapa-pantalla { z-index: 70; }
 .mapa-grande { flex: 1; min-height: 0; background: #dde6ec; }
 .selector-multi .selector-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
@@ -565,6 +578,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .cifra b { display: block; font-size: 1.7rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .cifra span { font-size: .84rem; color: var(--texto-suave); }
 .cifra.c-rojo { border-left-color: var(--rojo); } .cifra.c-amarillo { border-left-color: #e0b800; } .cifra.c-verde { border-left-color: var(--verde); }
+/* El total va lleno y "Por evaluar" con borde: antes los dos eran azules y se confundían (24/09). */
+.cifra.c-total { background: var(--azul); border-color: var(--azul); color: #fff; }
+.cifra.c-total span { color: #cfe3ec; }
 .paneles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .panel { background: #fff; border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px 14px; min-width: 0; }
 .panel h3 { font-size: 1rem; }
@@ -668,9 +684,9 @@ button.cifra:hover { box-shadow: var(--sombra); }
   /* En el celular el mapa va bajito para poder seguir bajando con el pulgar;
      para mirarlo de cerca está "Ver el mapa completo". */
   .mapa-tablero { height: 200px; }
-  .tablero-filtros .rango-fechas { flex-basis: 100%; }
-  .filtro-multi { flex: 1 1 100%; justify-content: space-between; }
-  .mapa-pie .btn-secundario { flex: 1; }
+  /* Las dos fechas lado a lado; los selectores, uno por fila (los nombres son largos). */
+  .filtro-caja { flex: 1 1 calc(50% - 3px); justify-content: space-between; }
+  .filtro-multi { flex-basis: 100%; }
 }
 @media (max-width: 480px) {
   .topbar-titulo span { display: none; }

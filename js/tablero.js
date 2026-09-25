@@ -180,7 +180,7 @@ function htmlFiltrosActivos() {
         '<span>' + esc(FILTROS_TABLERO[k].titulo) + ': <b>' + esc(etiquetaFiltro(k, v)) + '</b></span>' + equis + '</button>');
     });
   });
-  if (!chips.length) return '<p class="c-nota filtros-ayuda">Toque una barra, un día o una cifra para filtrar todo el tablero.</p>';
+  if (!chips.length) return '';          // sin filtros puestos no hace falta decir nada
   return '<div class="filtros-activos" aria-label="Filtros aplicados">' + chips.join('') +
     (chips.length > 1 ? '<button type="button" class="btn-texto" data-quitar="todos">Quitar todos</button>' : '') + '</div>';
 }
@@ -217,7 +217,7 @@ function pintarTablero() {
     (APP.busqueda ? '<p class="c-nota filtros-ayuda">Mostrando solo lo que coincide con «' + esc(APP.busqueda) + '» (buscador de arriba).</p>' : '') +
     htmlFiltrosActivos() +
     '<div class="cifras">' +
-    cifra('Evaluadas', lista.length, '', '') +
+    cifra('Evaluadas', lista.length, 'total', '') +
     cifra('No habitables', por('rojo'), 'rojo', 'no_habitable') +
     cifra('Uso restringido', por('amarillo'), 'amarillo', 'uso_restringido') +
     cifra('Habitables', por('verde'), 'verde', 'habitable') +
@@ -226,9 +226,12 @@ function pintarTablero() {
     // El mapa manda: va a todo el ancho, que es como se aprovecha que Pereira
     // se extiende de lado a lado (24/09).
     '<section class="panel panel-mapa"><h3>Mapa de las evaluaciones</h3>' +
-    '<div id="mapa-tablero" class="mapa-tablero"></div>' +
-    '<div class="mapa-pie"><p class="c-nota" id="mapa-tablero-nota"></p>' +
-    '<button type="button" class="btn-secundario btn-chico" data-mapa-grande>' + icono('ubicacion') + 'Ver el mapa completo</button></div></section>' +
+    // El botón de agrandar va en la esquina del mapa, discreto: como un control
+    // más del mapa y no como una barra que se roba la atención (24/09).
+    '<div class="mapa-marco"><div id="mapa-tablero" class="mapa-tablero"></div>' +
+    '<button type="button" class="btn-agrandar" data-mapa-grande title="Ver el mapa completo" aria-label="Ver el mapa completo">' +
+    icono('expandir') + '</button></div>' +
+    '<p class="c-nota" id="mapa-tablero-nota"></p></section>' +
     '<div class="paneles">' +
     '<section class="panel panel-ancho"><h3>Evaluaciones por día</h3>' + porDia(aplicarFiltros(base, 'dia')) + '</section>' +
     '<section class="panel"><h3>Barrios / veredas con más evaluaciones</h3>' + barras('barrio', conElegido('barrio', contar(aplicarFiltros(base, 'barrio'), 'barrio'), 8), 'var(--azul)') + '</section>' +
@@ -247,13 +250,16 @@ function hayAlgunFiltro() {
 function htmlFiltrosTablero(base) {
   const [a, b] = rangoDeFechas(), hoy = diaDe(new Date());
   const resumen = (lista, singular) => (!lista.length ? 'Todos' : lista.length === 1 ? etiquetaFiltro(singular, lista[0]) : lista.length + ' escogidos');
+  // Los cuatro con la misma caja y la misma altura: mezclados se veían desparejos.
   const boton = (clave, titulo, lista, singular) =>
-    '<button type="button" class="filtro-multi' + (lista.length ? ' puesto' : '') + '" data-abrir-multi="' + clave + '">' +
+    '<button type="button" class="filtro-caja filtro-multi' + (lista.length ? ' puesto' : '') + '" data-abrir-multi="' + clave + '">' +
     '<span class="filtro-et">' + titulo + '</span><span class="filtro-val">' + esc(resumen(lista, singular)) + '</span>' +
     icono('derecha') + '</button>';
+  const fecha = (cual, titulo, valor) =>
+    '<label class="filtro-caja' + (valor ? ' puesto' : '') + '"><span class="filtro-et">' + titulo + '</span>' +
+    '<input type="date" data-rango="' + cual + '" value="' + valor + '" max="' + hoy + '"></label>';
   return '<div class="tablero-filtros">' +
-    '<div class="rango-fechas"><label>Desde<input type="date" data-rango="desde" value="' + a + '" max="' + hoy + '"></label>' +
-    '<label>Hasta<input type="date" data-rango="hasta" value="' + b + '" max="' + hoy + '"></label></div>' +
+    fecha('desde', 'Desde', a) + fecha('hasta', 'Hasta', b) +
     boton('evaluador', 'Evaluador', TABLERO.evaluadores, 'evaluador') +
     boton('barrio', 'Barrio/vereda', TABLERO.barrios, 'barrio') +
     (a || b || hayAlgunFiltro() ? '<button type="button" class="btn-texto btn-chico" data-limpiar-todo>Quitar todos los filtros</button>' : '') +

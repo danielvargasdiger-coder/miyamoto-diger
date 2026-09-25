@@ -4,7 +4,7 @@
    ========================================================================= */
 'use strict';
 
-const VERSION_APP = 'miyamoto-43';     // subirla junto con VERSION en sw.js
+const VERSION_APP = 'miyamoto-45';     // subirla junto con VERSION en sw.js
 
 const APP = {
   perfil: null,          // { codigo, entidad, nombre, tipo_doc, num_doc, id_evaluador, matricula, dependencia }
@@ -98,7 +98,10 @@ const ICONOS = {
   salir: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/>',
   descargar: '<path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/>',
   ruta: '<path d="M3 11l18-8-8 18-2-8-8-2z"/>',
-  candado: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'
+  candado: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  // Cuatro esquinas hacia afuera: "agrandar". No se puede usar el de ubicación,
+  // que es el de tomar el GPS y se confunde (24/09).
+  expandir: '<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>'
 };
 
 function icono(nombre) {

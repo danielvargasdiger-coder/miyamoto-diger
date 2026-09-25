@@ -541,7 +541,25 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .pop-desc { color: var(--texto-suave); }
 
 .tablero { max-width: var(--ancho-app); margin: 0 auto; padding: 12px 16px 40px; display: grid; gap: 14px; }
-.tablero-filtros { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.tablero-filtros { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-end; }
+/* Evaluador y barrio/vereda: botón que abre la lista de varios (24/09). */
+.filtro-multi { display: flex; align-items: center; gap: 8px; min-height: 44px; background: #fff;
+  border: 1.5px solid var(--borde); border-radius: 8px; padding: 6px 10px; font: inherit; color: var(--texto); cursor: pointer; }
+.filtro-multi.puesto { border-color: var(--azul); background: var(--azul-claro); }
+.filtro-multi .filtro-et { font-size: .78rem; color: var(--texto-suave); }
+.filtro-multi .filtro-val { font-weight: 600; }
+.filtro-multi .ico { width: 18px; height: 18px; color: var(--texto-suave); }
+/* El mapa manda: a todo el ancho, que es como se aprovecha que Pereira es larga. */
+.panel-mapa { background: #fff; border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px 14px; margin-bottom: 14px; }
+.panel-mapa h3 { font-size: 1rem; margin-top: 0; }
+.mapa-pie { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.mapa-pie p { margin: 0; }
+.mapa-pantalla { z-index: 70; }
+.mapa-grande { flex: 1; min-height: 0; background: #dde6ec; }
+.selector-multi .selector-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.selector-multi .multi-n { color: var(--texto-suave); font-size: .85rem; flex: none; }
+.selector-pie { flex: none; padding: 10px 12px; background: #fff; border-top: 1px solid var(--borde); }
+.selector-pie .btn-principal { width: 100%; }
 .cifras { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 .cifra { background: #fff; border: 1px solid var(--borde); border-left: 5px solid var(--azul); border-radius: var(--radio); padding: 10px 12px; min-width: 0; }
 .cifra b { display: block; font-size: 1.7rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
@@ -639,10 +657,20 @@ button.cifra:hover { box-shadow: var(--sombra); }
   .gps-manual { grid-template-columns: 1fr 1fr; }
   .gps-manual button { grid-column: 1 / -1; }
 }
+/* Con el mapa a todo el ancho, los tres gráficos de barras caben en fila. */
+@media (min-width: 900px) {
+  .paneles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 @media (max-width: 760px) {
   .cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cifras .cifra:last-child { grid-column: 1 / -1; }
   .paneles { grid-template-columns: minmax(0, 1fr); }
+  /* En el celular el mapa va bajito para poder seguir bajando con el pulgar;
+     para mirarlo de cerca está "Ver el mapa completo". */
+  .mapa-tablero { height: 200px; }
+  .tablero-filtros .rango-fechas { flex-basis: 100%; }
+  .filtro-multi { flex: 1 1 100%; justify-content: space-between; }
+  .mapa-pie .btn-secundario { flex: 1; }
 }
 @media (max-width: 480px) {
   .topbar-titulo span { display: none; }

@@ -86,11 +86,11 @@ var Ficha = (function () {
 
   function pie(o, consecutivo) {
     var L = o.logos || {};
-    return '<table class="pie"><tr>' +
+    return '<div class="pie-bloque"><table class="pie"><tr>' +
       '<td class="pie-izq">' + (L.pie ? '<img src="' + L.pie + '" alt="">' : '') + '</td>' +
       '<td class="pie-cen">Número consecutivo: <b>' + esc(consecutivo) + '</b></td>' +
       '<td class="pie-der"><b>Versión:</b> ' + esc(E.FORMATO) + '</td>' +
-      '</tr></table>' + rastro(o);
+      '</tr></table>' + rastro(o) + '</div>';
   }
 
   // ---------------------------------------------------------------- SECCIONES
@@ -380,8 +380,7 @@ var Ficha = (function () {
    */
   function selloConsulta(o) {
     if (o.sello === false) return '';
-    return '<div class="sello">' + (o.sello ? esc(o.sello) : 'Datos consultados el <b>' + esc(o.consultado) + '</b> · Esta ficha se genera ' +
-      'en el momento de abrirla y siempre muestra la información vigente en la base de datos de la DIGER – Alcaldía de Pereira.') + '</div>';
+    return '<div class="sello">' + (o.sello ? esc(o.sello) : 'Datos consultados el <b>' + esc(o.consultado) + '</b> · Siempre muestra la información vigente de la DIGER – Alcaldía de Pereira.') + '</div>';
   }
 
   function rastro(o) {
@@ -499,7 +498,10 @@ var Ficha = (function () {
     '.enc-izq img,.enc-der img{max-width:100%;max-height:10mm}' +
     '.enc-cen{text-align:center;font-weight:bold;font-size:11pt;line-height:1.35}' +
     '.enc-sub{font-weight:normal;font-size:9pt}' +
-    '.pie{width:100%;border-collapse:collapse;margin-top:2px;font-size:7.6pt;page-break-before:avoid;break-before:avoid}' +
+    // El pie y el rastro son UN bloque que no se parte ni se queda solo: si no
+    // cabe, se lleva consigo el bloque anterior en vez de dejar una hoja en blanco.
+    '.pie-bloque{page-break-inside:avoid;break-inside:avoid;page-break-before:avoid;break-before:avoid}' +
+    '.pie{width:100%;border-collapse:collapse;margin-top:2px;font-size:7.6pt}' +
     '.pie-izq img{max-height:7mm}.pie-cen{text-align:center}.pie-der{text-align:right}' +
     '.caja{border:1.3px solid #000;padding:1px 5px 2px;margin-bottom:2px;page-break-inside:avoid;break-inside:avoid}' +
     '.tit{text-align:center;font-weight:bold;font-size:9pt;margin:1px 0 2px}' +
@@ -538,6 +540,9 @@ var Ficha = (function () {
     // se negaba a partirse, el PDF quedaba con media página en blanco (19/09).
     '.caja.abierta{page-break-inside:auto;break-inside:auto}' +
     '.subt{page-break-after:avoid;break-after:avoid}' +
+    // El aviso legal es texto corrido: puede partirse entre hojas. Si se niega
+    // a partirse, con un comentario muy largo se va entero y deja media hoja (26/09).
+    '.caja.legal{page-break-inside:auto;break-inside:auto}' +
     '.legal{padding:2px 6px 3px;font-size:6pt;line-height:1.2;color:#222;text-align:justify}' +
     '.legal-tit{font-size:6.6pt}' +
     '.sello{border-left:3px solid #1F4E79;background:#EEF3F8;padding:3px 7px;margin-bottom:3px;font-size:7.2pt;color:#333}' +

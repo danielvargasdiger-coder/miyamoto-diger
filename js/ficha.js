@@ -386,8 +386,8 @@ var Ficha = (function () {
 
   function rastro(o) {
     if (o.sello === false) return '';
-    return '<div class="rastro">' + (o.sello ? esc(o.sello) : 'Consultado el ' + esc(o.consultado) + '.' +
-      (o.enlace ? ' Fuente: ' + esc(o.enlace) + '.' : '') + ' Los datos pueden haber cambiado después de esta fecha.') + '</div>';
+    return '<div class="rastro">' + (o.sello ? esc(o.sello) : 'Consultado el ' + esc(o.consultado) +
+      (o.enlace ? ' · Fuente: ' + esc(o.enlace) : '')) + '</div>';
   }
 
   // ---------------------------------------------------------------- ANEXO
@@ -425,10 +425,20 @@ var Ficha = (function () {
     var L = o.logos || {};
     var titulo2 = grupos.length && justificar ? 'ANEXO — REGISTRO FOTOGRÁFICO Y JUSTIFICACIÓN'
       : (grupos.length ? 'ANEXO — REGISTRO FOTOGRÁFICO' : 'ANEXO — JUSTIFICACIÓN DE LA CLASIFICACIÓN');
-    var h = '<div class="pagina salto">' +
-      '<table class="enc"><tr><td class="enc-izq">' + (L.entidad ? '<img src="' + L.entidad + '" alt="">' : '') +
-      '</td><td class="enc-cen">' + titulo2 + '<br><span class="enc-sub">Formulario No. ' + esc(consecutivo) + '</span></td><td class="enc-der"></td></tr></table>';
+    /**
+     * Cada hoja del anexo es una hoja de verdad, con encabezado y pie, igual que
+     * las del formulario. Antes el anexo entero era UN bloque de 1,6 m de alto
+     * que se desbordaba solo: las hojas del medio salían sin encabezado ni pie
+     * y no respetaban el tamaño de las dos primeras (25/09).
+     */
+    function hojaAnexo(cuerpo) {
+      return '<div class="pagina salto">' +
+        '<table class="enc"><tr><td class="enc-izq">' + (L.entidad ? '<img src="' + L.entidad + '" alt="">' : '') +
+        '</td><td class="enc-cen">' + titulo2 + '<br><span class="enc-sub">Formulario No. ' + esc(consecutivo) +
+        '</span></td><td class="enc-der"></td></tr></table>' + cuerpo + pie(o, consecutivo) + '</div>';
+    }
 
+    var cajaJust = '';
     if (justificar) {
       var sug = E.sugerencia(d);
       var nombres = { verde: 'HABITABLE (Verde)', amarillo: 'USO RESTRINGIDO (Amarillo)', rojo: 'NO HABITABLE (Rojo)' };
@@ -436,7 +446,7 @@ var Ficha = (function () {
         ? '<b>' + nombres[sug.color] + '</b>' + (sug.motivos.length ? ' — por: ' + sug.motivos.map(function (m) { return esc(m.texto); }).join('; ') : '')
         : 'Sin sugerencia: faltan casillas de las secciones 7 a 10.';
       var elegido = d.clasif_habitabilidad ? E.etiquetaDe('habitabilidad', d.clasif_habitabilidad) : '(sin clasificar)';
-      h += '<div class="caja">' + titulo('SUGERENCIA DEL SISTEMA Y CLASIFICACIÓN DEL EVALUADOR') +
+      cajaJust = '<div class="caja">' + titulo('SUGERENCIA DEL SISTEMA Y CLASIFICACIÓN DEL EVALUADOR') +
         '<div class="texto">Sugerencia automática según los colores del formulario (secciones 7 a 10): ' + bloqueSug +
         '<br>Clasificación del evaluador: <b>' + esc(elegido) + '</b>' +
         (d.justificacion_clasif ? '<br>Justificación: ' + esc(d.justificacion_clasif) : '') +
@@ -446,25 +456,38 @@ var Ficha = (function () {
         '<br><span class="nota">La sugerencia es una ayuda: la clasificación la decide el evaluador.</span></div></div>';
     }
 
-    if (grupos.length) {
-      h += '<div class="caja abierta">' + titulo('REGISTRO FOTOGRÁFICO (MOVIMIENTO EN MASA Y DAÑOS DE LAS SECCIONES 9 Y 10)');
-      grupos.forEach(function (g) {
-        var filas = '';
-        for (var k = 0; k < g.urls.length; k += 2) {
-          filas += '<tr>' + [g.urls[k], g.urls[k + 1]].map(function (u, n) {
-            return u ? '<td class="foto"><img src="' + u + '" alt=""><div class="pie-foto">Foto ' + (k + n + 1) + '</div></td>' : '<td></td>';
-          }).join('') + '</tr>';
-        }
-        h += '<div class="grupo-foto"><div class="subt">' + esc(g.titulo) + '</div><table class="t fotos">' + filas + '</table></div>';
+    if (!grupos.length) return hojaAnexo(cajaJust);
+
+    // TODAS las fotos en una sola lista, para que llenen la fila aunque cada
+    // elemento traiga una sola. Antes cada elemento abría su propia fila de dos
+    // celdas y la de al lado quedaba vacía: 19 fotos gastaban 6 hojas usando un
+    // cuarto del ancho (25/09).
+    var tarjetas = [];
+    grupos.forEach(function (g) {
+      g.urls.forEach(function (u, k) {
+        tarjetas.push('<div class="foto-t"><img src="' + u + '" alt="">' +
+          '<div class="pie-foto">' + esc(g.titulo) + (g.urls.length > 1 ? ' — foto ' + (k + 1) : '') + '</div></div>');
       });
-      h += '</div>';
+    });
+
+    // Reparto FIJO, sin medir alturas: Apps Script no tiene navegador, y el PDF
+    // del servidor y el "Imprimir" del celular tienen que paginar igual.
+    var POR_FILA = 3, FILAS_POR_HOJA = 3;
+    var hojas = [];
+    for (var p = 0; p < tarjetas.length;) {
+      // En la primera hoja la justificación se lleva el espacio de dos filas.
+      var cupo = POR_FILA * (!hojas.length && justificar ? 1 : FILAS_POR_HOJA);
+      hojas.push(hojaAnexo((hojas.length ? '' : cajaJust) +
+        '<div class="caja abierta">' + titulo('REGISTRO FOTOGRÁFICO (MOVIMIENTO EN MASA Y DAÑOS DE LAS SECCIONES 9 Y 10)') +
+        '<div class="rejilla-fotos">' + tarjetas.slice(p, p + cupo).join('') + '</div></div>'));
+      p += cupo;
     }
-    return h + pie(o, consecutivo) + '</div>';
+    return hojas.join('');
   }
 
   // ---------------------------------------------------------------- CSS
   var CSS =
-    '@page{size:letter;margin:8mm 9mm}' +
+    '@page{size:letter;margin:6mm 9mm}' +
     '*{box-sizing:border-box}' +
     'body{margin:0;font-family:Arial,Helvetica,sans-serif;font-size:8pt;color:#000;background:#fff}' +
     '.pagina{width:196mm;margin:0 auto}' +
@@ -473,17 +496,17 @@ var Ficha = (function () {
     '.enc{width:100%;border-collapse:collapse;margin-bottom:2px}' +
     '.enc td{vertical-align:middle}' +
     '.enc-izq{width:24%}.enc-der{width:24%;text-align:right}' +
-    '.enc-izq img,.enc-der img{max-width:100%;max-height:12mm}' +
+    '.enc-izq img,.enc-der img{max-width:100%;max-height:10mm}' +
     '.enc-cen{text-align:center;font-weight:bold;font-size:11pt;line-height:1.35}' +
     '.enc-sub{font-weight:normal;font-size:9pt}' +
-    '.pie{width:100%;border-collapse:collapse;margin-top:2px;font-size:7.6pt}' +
+    '.pie{width:100%;border-collapse:collapse;margin-top:2px;font-size:7.6pt;page-break-before:avoid;break-before:avoid}' +
     '.pie-izq img{max-height:7mm}.pie-cen{text-align:center}.pie-der{text-align:right}' +
-    '.caja{border:1.3px solid #000;padding:1px 5px 3px;margin-bottom:3px;page-break-inside:avoid;break-inside:avoid}' +
+    '.caja{border:1.3px solid #000;padding:1px 5px 2px;margin-bottom:2px;page-break-inside:avoid;break-inside:avoid}' +
     '.tit{text-align:center;font-weight:bold;font-size:9pt;margin:1px 0 2px}' +
     '.subt{font-weight:bold;font-size:9pt;margin:3px 0 1px;display:inline-block}' +
     '.lbl{margin-top:2px}' +
     '.t{width:100%;border-collapse:collapse}' +
-    '.t td{padding:1px 3px;vertical-align:middle}' +
+    '.t td{padding:.5px 3px;vertical-align:middle}' +
     '.t td.l{white-space:nowrap;width:1%}' +
     '.t td.c{text-align:center;width:1%}' +
     '.mitades{table-layout:fixed}.mitades>tbody>tr>td{width:50%;vertical-align:top;padding:0 4px 0 0}' +
@@ -503,16 +526,18 @@ var Ficha = (function () {
     '.cuad img{max-width:100%;max-height:44mm;background:#fff}' +
     '.texto{min-height:9mm;padding:2px;white-space:pre-wrap}' +
     '.firma{font-style:italic}.img-firma{max-height:16mm;max-width:60mm;display:block}' +
-    '.fotos td.foto{width:50%;text-align:center;vertical-align:top;padding:3px}' +
-    '.fotos img{max-width:100%;max-height:85mm}' +
-    '.pie-foto{font-size:8pt;margin-top:2px}' +
-    '.grupo-foto{page-break-inside:avoid;break-inside:avoid;margin-bottom:4px}' +
+    // Rejilla de tres: las tarjetas se acomodan una tras otra y llenan la fila
+    // aunque cada elemento traiga una sola foto. inline-block y NO flex: el
+    // conversor de PDF de Google es viejo y no entiende flex.
+    '.rejilla-fotos{font-size:0}' +
+    '.foto-t{display:inline-block;vertical-align:top;width:32%;margin:0 1% 3mm 0;text-align:center;' +
+      'font-size:8pt;page-break-inside:avoid;break-inside:avoid}' +
+    '.foto-t img{max-width:100%;max-height:62mm}' +
+    '.pie-foto{font-size:7pt;margin-top:1px;line-height:1.15}' +
     // El anexo de fotos puede seguir en la página siguiente: si la caja entera
     // se negaba a partirse, el PDF quedaba con media página en blanco (19/09).
     '.caja.abierta{page-break-inside:auto;break-inside:auto}' +
-    '.fotos tr{page-break-inside:avoid;break-inside:avoid}' +
     '.subt{page-break-after:avoid;break-after:avoid}' +
-    '.fotos img{max-height:72mm}' +
     '.legal{padding:2px 6px 3px;font-size:6pt;line-height:1.2;color:#222;text-align:justify}' +
     '.legal-tit{font-size:6.6pt}' +
     '.sello{border-left:3px solid #1F4E79;background:#EEF3F8;padding:3px 7px;margin-bottom:3px;font-size:7.2pt;color:#333}' +

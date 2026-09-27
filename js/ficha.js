@@ -489,6 +489,12 @@ var Ficha = (function () {
   // ---------------------------------------------------------------- CSS
   var CSS =
     '@page{size:letter;margin:6mm 9mm}' +
+    // Sin esto el PDF sale en blanco y negro (27/09). Quien arma el PDF —el
+    // servidor con Apps Script y el "Imprimir" del celular— lo hace con los
+    // "gráficos de fondo" APAGADOS, y Chromium borra todos los rellenos: los
+    // bordes negros y las fotos salían, los colores no. Los colores de las
+    // casillas son los del papel, no son adorno. Se hereda desde la raíz.
+    'html{-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
     '*{box-sizing:border-box}' +
     'body{margin:0;font-family:Arial,Helvetica,sans-serif;font-size:8pt;color:#000;background:#fff}' +
     '.pagina{width:196mm;margin:0 auto}' +

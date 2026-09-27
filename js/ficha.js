@@ -477,7 +477,9 @@ var Ficha = (function () {
       // En la primera hoja la justificación se lleva el espacio de dos filas.
       var cupo = POR_FILA * (!hojas.length && justificar ? 1 : FILAS_POR_HOJA);
       hojas.push(hojaAnexo((hojas.length ? '' : cajaJust) +
-        '<div class="caja abierta">' + titulo('REGISTRO FOTOGRÁFICO (MOVIMIENTO EN MASA Y DAÑOS DE LAS SECCIONES 9 Y 10)') +
+        // Sin título adentro: el encabezado de la hoja ya dice "ANEXO — REGISTRO
+        // FOTOGRÁFICO", y al paginar salía repetido en cada hoja (26/09).
+        '<div class="caja abierta">' +
         '<div class="rejilla-fotos">' + tarjetas.slice(p, p + cupo).join('') + '</div></div>'));
       p += cupo;
     }

@@ -125,6 +125,14 @@ async function conReintentoDeRed(fn, avisar) {
   }
 }
 
+/**
+ * Fotos que suben a la vez (27/09). Una por una, cada foto pagaba ~2,5 s de
+ * arranque de Apps Script. Google da 30 ejecuciones simultáneas para TODOS
+ * los evaluadores juntos (el servidor corre a nombre de una sola cuenta):
+ * con 3, aguantan 10 evaluadores enviando al mismo tiempo.
+ */
+const FOTOS_A_LA_VEZ = 3;
+
 async function enviarUna(item) {
   item.error = 'Enviando…';
   await DB.guardar('cola', item);
@@ -135,30 +143,52 @@ async function enviarUna(item) {
   const yaEstan = new Set(r.fotosRecibidas || []);
   await DB.guardar('cola', item);
 
-  let n = 0;
+  const pendientes = item.fotos.filter((f) => !yaEstan.has(f.nombre));
   const perdidas = [];
-  for (const f of item.fotos) {
-    n++;
-    if (yaEstan.has(f.nombre)) continue;
+  let hechas = item.fotos.length - pendientes.length;
+  const avisar = (extra) => {
+    item.error = 'Subiendo fotos: ' + hechas + ' de ' + item.fotos.length + (extra || '') + '…';
+    pintarInicio();
+  };
+
+  /** Sube una foto. false si ya no estaba en el celular. */
+  async function subirFoto(f) {
     const reg = await DB.leer('fotos', f.clave);
     // Se borró del celular (el sistema liberó espacio): no hay nada que subir.
     // No se sigue esperando: si no, la evaluación quedaba en cola para siempre.
-    if (!reg) { perdidas.push(f.nombre); continue; }
-    item.error = 'Subiendo foto ' + n + ' de ' + item.fotos.length + '…';
-    pintarInicio();
+    if (!reg) { perdidas.push(f.nombre); return false; }
     await conReintentoDeRed(
       () => api('subir_foto', {
         id: item.id, campo: f.campo, nombre: f.nombre, tipo: reg.tipo,
         base64: reg.dataUrl.split(',')[1]
       }, 45000),
-      (intento) => {
-        item.error = 'Foto ' + n + ' de ' + item.fotos.length + ': reintento ' + intento + '…';
-        pintarInicio();
-      }
+      (intento) => avisar(' (reintento ' + intento + ')')
     );
     item.subidas.push(f.nombre);
+    hechas++;
+    avisar();
     await DB.guardar('cola', item);
+    return true;
   }
+
+  avisar();
+  let i = 0;
+  // La primera va SOLA cuando el servidor aún no tiene ninguna: es la que crea la
+  // carpeta de Drive, y si arrancaran varias juntas cada una podía crear la suya.
+  let hayCarpeta = yaEstan.size > 0;
+  while (!hayCarpeta && i < pendientes.length) hayCarpeta = await subirFoto(pendientes[i++]);
+
+  // Las demás de a FOTOS_A_LA_VEZ. Si una falla no se arrancan más, pero las que
+  // ya iban terminan y quedan anotadas: el próximo intento sube solo las que falten.
+  let fallo = null;
+  async function turno() {
+    while (i < pendientes.length && !fallo) {
+      const f = pendientes[i++];
+      try { await subirFoto(f); } catch (e) { fallo = fallo || e; }
+    }
+  }
+  await Promise.all(Array.from({ length: FOTOS_A_LA_VEZ }, turno));
+  if (fallo) throw fallo;
 
   if (perdidas.length) console.warn('Fotos que ya no estaban en el celular:', item.id, perdidas);
   // El cierre es justo donde se quedaban trabadas ("RECIBIENDO FOTOS"): con

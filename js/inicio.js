@@ -110,6 +110,14 @@ function vacioHtml(titulo, texto) {
 function htmlPorEvaluar(pend) {
   if (!pend.length && APP.busqueda) return vacioBusqueda();
   if (!pend.length) {
+    // (02/10) Mientras baja el catálogo por primera vez NO es que no haya visitas; si la
+    // descarga falló tampoco. Antes la persona nueva veía "No tiene visitas asignadas".
+    if (!APP.ultimaSync && APP.sincronizando) {
+      return vacioHtml('Descargando sus visitas…', 'Un momento: se están trayendo del servidor. Puede tardar unos segundos.');
+    }
+    if (!APP.ultimaSync && APP.primeraSyncFallo) {
+      return vacioHtml('No se pudieron descargar sus visitas', 'Toque el botón de sincronizar (las dos flechas) para intentarlo de nuevo.');
+    }
     return vacioHtml('No tiene visitas asignadas',
       'Aquí aparecen las visitas que la DIGER le asigne. Para evaluar una edificación que no está en la lista, toque el botón +.');
   }
@@ -413,23 +421,38 @@ async function ingresar(ev) {
   const firma = firmaPendiente || (APP.perfilAnterior && APP.perfilAnterior.firma);
   if (!firma) { toast('Falta su firma: toque "Firmar".', 'error'); return; }
   perfil.firma = firma;
-  cargando(true, 'Verificando el código…');
+  cargando(true, 'Verificando el código y trayendo sus visitas…');
   try {
     APP.perfil = { codigo };                          // api() lo necesita para mandarlo
     // Con nombre y documento queda en la pestaña TECNICOS (para asignarle visitas).
+    // con_catalogo: el servidor nuevo trae sus visitas en esta misma llamada (02/10);
+    // uno viejo lo ignora y se piden aparte, como antes.
+    const t0 = Date.now();
     const r = await api('ingresar', { codigo, nombre: perfil.nombre, tipo_doc: perfil.tipo_doc, num_doc: perfil.num_doc,
-      matricula: perfil.matricula, entidad_ficha: perfil.entidad_ficha, dependencia: perfil.dependencia });
+      matricula: perfil.matricula, entidad_ficha: perfil.entidad_ficha, dependencia: perfil.dependencia,
+      con_catalogo: true }, 90000);
     // El servidor devuelve los nombres oficiales (normalizados) y la lista al día.
     if (r.entidad_ficha) perfil.entidad_ficha = r.entidad_ficha;
     if (r.dependencia) perfil.dependencia = r.dependencia;
     await guardarListas(r.listas);
     APP.perfil = Object.assign(perfil, { codigo, entidad: r.entidad || CONFIG.ENTIDAD });
     await DB.guardarKV('perfil', APP.perfil);
-    entrarApp();
-    sincronizar(true);
+    let conCatalogo = false;
+    if (r.catalogo) {
+      // Si guardarlo falla no se pierde el ingreso: se piden aparte como antes.
+      try { await aplicarCatalogo(r.catalogo, Date.now() - t0); conCatalogo = true; } catch (e) { /* se pide aparte */ }
+    }
+    await entrarApp();
+    // Con fichas esperando en la cola (p. ej. el código cambió) se sincroniza igual: así se envían al entrar.
+    if (!conCatalogo || APP.cola.length) sincronizar(true);
   } catch (e) {
     APP.perfil = null;
-    toast(e.delServidor ? e.message : 'Se necesita señal para el primer ingreso.', 'error');
+    // (02/10) Antes TODO fallo que no fuera del servidor decía "se necesita señal",
+    // también una espera agotada o una página de error de Google.
+    toast(e.delServidor ? e.message
+      : !navigator.onLine ? 'Se necesita señal para el primer ingreso.'
+      : (e.tiempoAgotado || e.respuestaRara) ? 'El servidor está tardando más de lo normal. Espere un momento y toque Ingresar otra vez.'
+      : 'No se pudo conectar con el servidor. Revise su señal e intente otra vez.', 'error');
   } finally { cargando(false); }
 }
 

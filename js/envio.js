@@ -215,31 +215,75 @@ async function enviarUna(item) {
   for (const f of await DB.fotosDe(item.id)) await DB.borrar('fotos', f.clave);
 }
 
+/**
+ * Cuánto espera el catálogo. Con 432 evaluaciones y 250 solicitudes tarda ~7 s
+ * (medido 02/10; 3,1 s son el arranque de Google), pero Google a veces se pone
+ * lento (se vio una llamada de 153 s): rendirse a los 45 s y volver a pedirlo
+ * solo sumaba carga.
+ */
+const ESPERA_CATALOGO = 90000;
+let _resincronizar = false;
+let _reintentosPrimera = 0;
+
+/** Qué decirle a la persona cuando una llamada al servidor no resultó. */
+function explicarFallo(e) {
+  if (e.delServidor) return e.message;
+  if (!navigator.onLine) return 'Sin conexión.';
+  if (e.tiempoAgotado || e.respuestaRara) return 'El servidor está lento o muy ocupado.';
+  return 'No se pudo conectar con el servidor.';
+}
+
+/** Deja el catálogo en la app y en el celular. ms: lo que tardó, para verlo en el estado. */
+async function aplicarCatalogo(r, ms) {
+  APP.solicitudes = r.solicitudes || [];
+  APP.historial = r.evaluaciones || [];
+  await guardarListas(r.listas);
+  APP.ultimaSync = new Date().toISOString();
+  APP.ultimaSyncMs = ms || null;
+  APP.primeraSyncFallo = false;
+  _reintentosPrimera = 0;
+  await DB.guardarKV('catalogo', { solicitudes: APP.solicitudes, historial: APP.historial, cuando: APP.ultimaSync, ms: APP.ultimaSyncMs });
+  // Lo que el servidor ya devuelve deja de hacer falta en el historial local.
+  const ids = new Set(APP.historial.map((h) => h.id));
+  const locales = ((await DB.leerKV('enviadasLocal')) || []).filter((e) => !ids.has(e.id));
+  await DB.guardarKV('enviadasLocal', locales);
+}
+
+/** Quien nunca logró descargar su lista: se reintenta sola, 3 veces, cada 10 s. */
+function reintentarPrimera() {
+  if (_reintentosPrimera >= 3 || !navigator.onLine) return;
+  _reintentosPrimera++;
+  setTimeout(() => { if (!APP.ultimaSync) sincronizar(true); }, 10000);
+}
+
 async function sincronizar(silencioso) {
   if (APP.sincronizando || !APP.perfil) return;
   APP.sincronizando = true;
   pintarConexion();
+  if (!APP.ultimaSync) pintarInicio();      // persona nueva: que la lista diga "Descargando…", no "sin visitas"
+  // (02/10) La cola se envía DE FONDO. Antes se esperaba aquí: con mala señal cada foto
+  // espera 45 s por intento (3 intentos) y el catálogo ni siquiera se pedía; la app
+  // decía "Sincronizando…" durante minutos. Si algo se envió, se vuelve a sincronizar
+  // al terminar para traer lo recién enviado.
+  enviarCola(true).then((r) => {
+    if (!r || !r.bien) return;
+    if (APP.sincronizando) _resincronizar = true; else sincronizar(true);
+  }, () => {});
   try {
-    await enviarCola(true);
-    const r = await api('catalogo', quienSoy());
-    APP.solicitudes = r.solicitudes || [];
-    APP.historial = r.evaluaciones || [];
-    await guardarListas(r.listas);
-    APP.ultimaSync = new Date().toISOString();
-    await DB.guardarKV('catalogo', { solicitudes: APP.solicitudes, historial: APP.historial, cuando: APP.ultimaSync });
-    // Lo que el servidor ya devuelve deja de hacer falta en el historial local.
-    const ids = new Set(APP.historial.map((h) => h.id));
-    const locales = ((await DB.leerKV('enviadasLocal')) || []).filter((e) => !ids.has(e.id));
-    await DB.guardarKV('enviadasLocal', locales);
+    const t0 = Date.now();
+    const r = await api('catalogo', quienSoy(), ESPERA_CATALOGO);
+    await aplicarCatalogo(r, Date.now() - t0);
     if (!silencioso) toast('Sincronizado', 'ok');
   } catch (e) {
-    if (!silencioso) toast(e.delServidor ? e.message : 'Sin conexión. Trabajando con lo guardado.', 'error');
+    if (!APP.ultimaSync) { APP.primeraSyncFallo = true; reintentarPrimera(); }
+    if (!silencioso) toast(e.delServidor ? e.message : explicarFallo(e) + ' Trabajando con lo guardado.', 'error');
   } finally {
     APP.sincronizando = false;
     await recargarLocales();
     pintarInicio();
     pintarConexion();
     aplicarVersionSiSePuede();            // una versión nueva que esperaba a que terminara
+    if (_resincronizar) { _resincronizar = false; sincronizar(true); }
   }
 }
 
@@ -247,6 +291,7 @@ function estadoDeConexion() {
   const enCola = APP.cola.length;
   const cuando = APP.ultimaSync ? fechaBonita(APP.ultimaSync) : 'nunca';
   let t = (navigator.onLine ? '' : 'Sin señal · ') + 'Última sincronización: ' + cuando;
+  if (APP.ultimaSync && APP.ultimaSyncMs) t += ' (' + Math.max(1, Math.round(APP.ultimaSyncMs / 1000)) + ' s)';
   if (enCola) t += ' · ' + enCola + (enCola === 1 ? ' por enviar' : ' por enviar');
   return t;
 }

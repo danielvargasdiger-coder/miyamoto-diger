@@ -41,7 +41,7 @@ async function entrarApp() {
   $$('section.vista').forEach((v) => { v.hidden = true; });
   $('#vista-inicio').hidden = false;
   const cat = await DB.leerKV('catalogo');
-  if (cat) { APP.solicitudes = cat.solicitudes || []; APP.historial = cat.historial || []; APP.ultimaSync = cat.cuando; }
+  if (cat) { APP.solicitudes = cat.solicitudes || []; APP.historial = cat.historial || []; APP.ultimaSync = cat.cuando; APP.ultimaSyncMs = cat.ms || null; }
   await recargarLocales();
   irAVista(APP.vista || 'lista');
 

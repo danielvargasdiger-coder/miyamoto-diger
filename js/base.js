@@ -4,7 +4,7 @@
    ========================================================================= */
 'use strict';
 
-const VERSION_APP = 'miyamoto-49';     // subirla junto con VERSION en sw.js
+const VERSION_APP = 'miyamoto-50';     // subirla junto con VERSION en sw.js
 
 const APP = {
   perfil: null,          // { codigo, entidad, nombre, tipo_doc, num_doc, id_evaluador, matricula, dependencia }
@@ -173,22 +173,39 @@ async function api(accion, carga, msTimeout) {
   const control = new AbortController();
   const temp = setTimeout(() => control.abort(), msTimeout || 45000);
   try {
-    const res = await fetch(CONFIG.API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(Object.assign({
-        accion: accion,
-        codigo: APP.perfil ? APP.perfil.codigo : '',
-        versionApp: VERSION_APP,
-        esquema: Esquema.huella()
-      }, carga || {})),
-      signal: control.signal,
-      redirect: 'follow'
-    });
-    const texto = await res.text();
+    let texto;
+    try {
+      const res = await fetch(CONFIG.API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(Object.assign({
+          accion: accion,
+          codigo: APP.perfil ? APP.perfil.codigo : '',
+          versionApp: VERSION_APP,
+          esquema: Esquema.huella()
+        }, carga || {})),
+        signal: control.signal,
+        redirect: 'follow'
+      });
+      texto = await res.text();
+    } catch (e) {
+      // (02/10) Se acabó la espera: NO es falta de señal, el servidor no contestó a tiempo.
+      // Antes todo lo que no fuera un error explícito se mostraba como "sin conexión".
+      if (e && e.name === 'AbortError') {
+        const t = new Error('El servidor tardó demasiado en responder.');
+        t.tiempoAgotado = true;
+        throw t;
+      }
+      throw e;
+    }
     let json;
     try { json = JSON.parse(texto); }
-    catch (e) { throw new Error('El servidor respondió algo inesperado. ¿La app web está publicada para "Cualquier usuario"?'); }
+    catch (e) {
+      // Google devuelve una página HTML cuando se sobrecarga o se pasa de cupo.
+      const t = new Error('El servidor respondió algo inesperado. ¿La app web está publicada para "Cualquier usuario"?');
+      t.respuestaRara = true;
+      throw t;
+    }
     if (json.esquema) APP.huellaServidor = json.esquema;
     if (!json.ok) {
       const err = new Error(json.error || 'Error del servidor');

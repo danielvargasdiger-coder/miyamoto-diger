@@ -261,7 +261,7 @@ async function abrirVistaPreviaCola(c) {
   const datos = Object.assign({}, c.datos);
   c.fotos.forEach((f) => { datos[f.campo] = (Array.isArray(datos[f.campo]) ? datos[f.campo] : []).map((n) => (n === f.nombre ? f.clave : n)); });
   if (datos.fecha_hora_inspeccion) datos.fecha_hora_inspeccion = ahoraLocal(new Date(datos.fecha_hora_inspeccion));
-  abrirVistaPrevia(c.id, datos, 'Esta evaluación está en cola: todavía no ha llegado al servidor.');
+  abrirVistaPrevia(c.id, datos, 'Esta evaluación está en cola: todavía no ha llegado al servidor. Al llegar recibe su número, y el PDF oficial queda en «Enviadas».');
 }
 
 // ---------------------------------------------------------------- INGRESO Y PERFIL

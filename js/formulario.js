@@ -919,14 +919,23 @@ async function ponerZona(d) {
 // ---------------------------------------------------------------- VISTA PREVIA
 const LOGOS_FICHA = { sngrd: 'img/logo-sngrd.png', miyamoto: 'img/logo-usaid-miyamoto.png', pie: 'img/logos-pie.png', entidad: 'img/logo-app.png' };
 
+/** La demostración abre aquí también las fichas ya enviadas: el título de la pantalla cambia según lo que se muestre. */
+function rotularPrevia(titulo, subtitulo) {
+  const t = $('#vista-previa .ficha-cab-texto');
+  t.querySelector('b').textContent = titulo;
+  t.querySelector('span').textContent = subtitulo;
+}
+
 async function abrirVistaPrevia(idEval, datos, aviso) {
   cargando(true, 'Armando la ficha…');
   try {
     const { fotos, firma } = await fotosParaFicha(idEval, datos);
     const html = Ficha.html(Esquema.limpiarOcultos(datos), { logos: LOGOS_FICHA, fotos, firma, aviso,
-      sello: 'Vista previa generada en el celular el ' + Ficha.ahoraColombia() + '. Aún no se ha enviado a la DIGER; no es una ficha oficial.' });
+      sello: 'Vista previa generada en el celular el ' + Ficha.ahoraColombia() + '. Aún no se ha enviado a la DIGER; no es una ficha oficial.',
+      vistaPrevia: true });
     const marco = $('#previa-marco');
     marco.srcdoc = html;
+    rotularPrevia('Vista previa', 'Aún sin número · no es una ficha oficial');
     $('#vista-previa').hidden = false;
   } finally { cargando(false); }
 }
@@ -957,6 +966,7 @@ async function abrirFichaDemo(id) {
     }
     $('#previa-marco').srcdoc = Ficha.html(Esquema.limpiarOcultos(datos), { logos: LOGOS_FICHA, fotos, firma,
       sello: 'FICHA DE DEMOSTRACIÓN generada el ' + Ficha.ahoraColombia() + ' con datos inventados. No corresponde a ninguna edificación real.' });
+    rotularPrevia('Ficha de demostración', 'Datos inventados · solo para mostrar la app');
     $('#vista-previa').hidden = false;
   } finally { cargando(false); }
 }
@@ -983,7 +993,6 @@ function iniciarEventosFicha() {
   });
   $('#semaforo').addEventListener('click', () => irAPaso('s12'));
   $('#previa-cerrar').addEventListener('click', () => { $('#vista-previa').hidden = true; $('#previa-marco').srcdoc = ''; });
-  $('#previa-imprimir').addEventListener('click', () => { const w = $('#previa-marco').contentWindow; if (w) w.print(); });
 }
 
 // ---------------------------------------------------------------- DIÁLOGO

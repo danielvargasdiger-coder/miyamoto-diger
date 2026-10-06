@@ -378,6 +378,13 @@ var Ficha = (function () {
    * los datos. Una impresión o captura queda fechada; los datos pueden
    * cambiar después. o.sello cambia el texto (p. ej. en la vista previa).
    */
+  /** Solo en la vista previa (o.vistaPrevia): la ficha enviada nunca la lleva. */
+  function marca(o) {
+    return o.vistaPrevia
+      ? '<div class="marca-agua"><b>VISTA PREVIA</b><span>SIN VALOR OFICIAL · AÚN SIN NÚMERO</span></div>'
+      : '';
+  }
+
   function selloConsulta(o) {
     if (o.sello === false) return '';
     return '<div class="sello">' + (o.sello ? esc(o.sello) : 'Datos consultados el <b>' + esc(o.consultado) + '</b> · Siempre muestra la información vigente de la DIGER – Alcaldía de Pereira.') + '</div>';
@@ -431,7 +438,7 @@ var Ficha = (function () {
      * y no respetaban el tamaño de las dos primeras (25/09).
      */
     function hojaAnexo(cuerpo) {
-      return '<div class="pagina salto">' +
+      return '<div class="pagina salto">' + marca(o) +
         '<table class="enc"><tr><td class="enc-izq">' + (L.entidad ? '<img src="' + L.entidad + '" alt="">' : '') +
         '</td><td class="enc-cen">' + titulo2 + '<br><span class="enc-sub">Formulario No. ' + esc(consecutivo) +
         '</span></td><td class="enc-der"></td></tr></table>' + cuerpo + pie(o, consecutivo) + '</div>';
@@ -497,7 +504,14 @@ var Ficha = (function () {
     'html{-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
     '*{box-sizing:border-box}' +
     'body{margin:0;font-family:Arial,Helvetica,sans-serif;font-size:8pt;color:#000;background:#fff}' +
-    '.pagina{width:196mm;margin:0 auto}' +
+    '.pagina{width:196mm;margin:0 auto;position:relative}' +
+    // Marca de agua de la VISTA PREVIA (05/10): una evaluación en cola no tiene número y un
+    // PDF así se confundía con una ficha. Absoluta: no cambia el alto de la hoja ni empuja nada.
+    '.marca-agua{position:absolute;left:0;right:0;top:36%;text-align:center;transform:rotate(-28deg);' +
+      'color:rgba(190,30,30,.17);font-family:Arial,Helvetica,sans-serif;font-weight:bold;line-height:1.1;' +
+      'pointer-events:none;user-select:none;-webkit-user-select:none;z-index:9;white-space:nowrap}' +
+    '.marca-agua b{display:block;font-size:58pt;letter-spacing:3px}' +
+    '.marca-agua span{display:block;font-size:19pt;letter-spacing:1px}' +
     '.salto{page-break-before:always;break-before:page}' +
     '.aviso{background:#fff3cd;border:1px solid #d9a400;padding:6px 8px;margin:0 auto 6px;max-width:196mm;font-size:9pt}' +
     '.enc{width:100%;border-collapse:collapse;margin-bottom:2px}' +
@@ -578,10 +592,10 @@ var Ficha = (function () {
     d = d || {}; o = o || {};
     var consecutivo = d.num_formulario || '(sin asignar)';
     o.consultado = o.consultado || ahoraColombia();
-    var p1 = '<div class="pagina">' + encabezado(o, consecutivo) + selloConsulta(o) +
+    var p1 = '<div class="pagina">' + marca(o) + encabezado(o, consecutivo) + selloConsulta(o) +
       '<table class="t mitades"><tr><td>' + s1(d) + '</td><td>' + s2(d) + s3(d) + '</td></tr></table>' +
       s4(d) + s5(d) + s6(d) + s7y8(d) + s9(d) + pie(o, consecutivo) + '</div>';
-    var p2 = '<div class="pagina salto">' + encabezado(o, consecutivo) +
+    var p2 = '<div class="pagina salto">' + marca(o) + encabezado(o, consecutivo) +
       s10(d) + s11(d, o) + s12(d) + s13(d) + s14(d) + s15(d) + s16(d, o) + avisoLegal() + pie(o, consecutivo) + '</div>';
     var cuerpo = (o.aviso ? '<div class="aviso no-imprimir">' + esc(o.aviso) + '</div>' : '') + p1 + p2 + anexo(d, o, consecutivo);
     if (o.cuerpoSolo) return '<style>' + CSS + '</style>' + cuerpo;

@@ -133,6 +133,48 @@ async function conReintentoDeRed(fn, avisar) {
  */
 const FOTOS_A_LA_VEZ = 3;
 
+/**
+ * Fotos directo a Cloudflare (fase 1, 07/10/2026). Si guardar_evaluacion trae `subida`
+ * ({ url, permiso }), cada foto va al Worker como ARCHIVO (no como texto base64: ~25 %
+ * menos) en ~0,2-0,5 s, en vez de ~2,5 s por Google. El permiso lo firma Google y vale
+ * 24 h; cada intento de envío empieza con guardar_evaluacion, así que siempre está fresco.
+ * Un 4xx (permiso vencido, nombre raro) es "del servidor": insistir no cambia nada.
+ */
+async function pedirCloudflare(url, opciones, ms) {
+  const control = new AbortController();
+  const temp = setTimeout(() => control.abort(), ms || 45000);
+  try {
+    let res;
+    try { res = await fetch(url, Object.assign({ signal: control.signal }, opciones || {})); }
+    catch (e) {
+      if (e && e.name === 'AbortError') {
+        const t = new Error('El servidor de fotos tardó demasiado en responder.');
+        t.tiempoAgotado = true;
+        throw t;
+      }
+      throw e;
+    }
+    let j = null;
+    try { j = await res.json(); } catch (e) { /* sin JSON: se informa abajo con el código */ }
+    if (!res.ok || !j || !j.ok) {
+      const err = new Error((j && j.error) || ('El servidor de fotos respondió ' + res.status + '.'));
+      if (res.status >= 400 && res.status < 500) err.delServidor = true;
+      throw err;
+    }
+    return j;
+  } finally {
+    clearTimeout(temp);
+  }
+}
+
+/** "data:image/jpeg;base64,..." -> bytes, para mandar la foto como archivo. */
+function bytesDe(dataUrl) {
+  const bin = atob(String(dataUrl).split(',')[1] || '');
+  const b = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+  return b;
+}
+
 async function enviarUna(item) {
   item.error = 'Enviando…';
   await DB.guardar('cola', item);
@@ -140,7 +182,13 @@ async function enviarUna(item) {
 
   const r = await api('guardar_evaluacion', { id: item.id, datos: item.datos, fotosEsperadas: item.fotos.length });
   item.num_formulario = r.num_formulario;
+  const nube = r.subida || null;          // fase 1: con esto las fotos van a Cloudflare
   const yaEstan = new Set(r.fotosRecibidas || []);
+  if (nube) {
+    // Las que ya llegaron a Cloudflare en un intento anterior (las de Drive vienen en fotosRecibidas).
+    const l = await conReintentoDeRed(() => pedirCloudflare(nube.url + '/fotos/' + item.id + '?permiso=' + encodeURIComponent(nube.permiso)));
+    (l.nombres || []).forEach((n) => yaEstan.add(n));
+  }
   await DB.guardar('cola', item);
 
   const pendientes = item.fotos.filter((f) => !yaEstan.has(f.nombre));
@@ -158,10 +206,13 @@ async function enviarUna(item) {
     // No se sigue esperando: si no, la evaluación quedaba en cola para siempre.
     if (!reg) { perdidas.push(f.nombre); return false; }
     await conReintentoDeRed(
-      () => api('subir_foto', {
-        id: item.id, campo: f.campo, nombre: f.nombre, tipo: reg.tipo,
-        base64: reg.dataUrl.split(',')[1]
-      }, 45000),
+      () => (nube
+        ? pedirCloudflare(nube.url + '/fotos/' + item.id + '/' + f.nombre + '?permiso=' + encodeURIComponent(nube.permiso),
+          { method: 'PUT', headers: { 'Content-Type': reg.tipo, 'X-Campo': f.campo }, body: bytesDe(reg.dataUrl) }, 45000)
+        : api('subir_foto', {
+          id: item.id, campo: f.campo, nombre: f.nombre, tipo: reg.tipo,
+          base64: reg.dataUrl.split(',')[1]
+        }, 45000)),
       (intento) => avisar(' (reintento ' + intento + ')')
     );
     item.subidas.push(f.nombre);
@@ -173,9 +224,10 @@ async function enviarUna(item) {
 
   avisar();
   let i = 0;
-  // La primera va SOLA cuando el servidor aún no tiene ninguna: es la que crea la
-  // carpeta de Drive, y si arrancaran varias juntas cada una podía crear la suya.
-  let hayCarpeta = yaEstan.size > 0;
+  // La primera va SOLA cuando va a Drive y el servidor aún no tiene ninguna: es la que
+  // crea la carpeta, y si arrancaran varias juntas cada una podía crear la suya.
+  // En Cloudflare no hay carpeta que crear: arrancan juntas desde la primera.
+  let hayCarpeta = !!nube || yaEstan.size > 0;
   while (!hayCarpeta && i < pendientes.length) hayCarpeta = await subirFoto(pendientes[i++]);
 
   // Las demás de a FOTOS_A_LA_VEZ. Si una falla no se arrancan más, pero las que

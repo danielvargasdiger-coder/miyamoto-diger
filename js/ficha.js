@@ -571,7 +571,11 @@ var Ficha = (function () {
     '.rastro{font-size:5.6pt;color:#444;text-align:center;margin-top:0;overflow-wrap:anywhere;line-height:1.15}' +
     '@media screen{body{background:#eef1f4;padding:10px 6px}.pagina{background:#fff;padding:8px;box-shadow:0 1px 4px rgba(0,0,0,.2);margin-bottom:12px}}' +
     '@media screen{.aviso{width:196mm}}' +
-    '@media print{.no-imprimir{display:none}.pagina,.aviso{zoom:1!important}}';
+    '@media print{.no-imprimir{display:none}.pagina,.aviso{zoom:1!important}}' +
+    // iPhone/iPad (08/10): Safari ignora @page y pone sus márgenes y su encabezado y pie; quedan ~243 mm
+    // y en Safari la hoja 1 mide ~269 mm (PDF real de DIGER-57SQ-7TCE), así que cada hoja se partía en dos; al 85 %, ~229. Solo Safari de iOS entiende
+    // -webkit-touch-callout: ni el computador, ni Android, ni el PDF de Google cambian. Va DESPUÉS del zoom:1.
+    '@supports (-webkit-touch-callout:none){@media print{.pagina,.aviso{zoom:.85!important}}}';
 
   // En pantallas angostas la hoja carta se encoge entera, como un visor de
   // PDF, en vez de desbordarse o reacomodarse (debe verse igual al papel).

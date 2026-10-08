@@ -17,9 +17,25 @@
 'use strict';
 
 /** Datos listos para viajar: sin campos ocultos, fecha con zona, fotos por nombre. */
+/**
+ * Lo que la persona puso en "Mis datos" HOY manda sobre lo que quedó guardado en una evaluación que aún no salió
+ * (si corrigió su nombre, esa evaluación no debe llegar con el viejo). Solo si la evaluación es SUYA (mismo
+ * documento, o el que tenía antes de corregirlo): otra persona pudo usar este celular y dejar la suya en la cola.
+ */
+function aplicarPerfilActual(d) {
+  const p = APP.perfil;
+  if (!p || !p.num_doc) return;
+  const llave = (x) => String(x == null ? '' : x).replace(/[^0-9A-Za-z]/g, '').toUpperCase().replace(/^0+/, '');
+  const suya = llave(d.eval_num_doc);
+  if (!suya || (suya !== llave(p.num_doc) && suya !== llave(p.docAnterior))) return;
+  [['eval_nombre', 'nombre'], ['eval_tipo_doc', 'tipo_doc'], ['eval_num_doc', 'num_doc'], ['eval_matricula', 'matricula'],
+    ['eval_entidad', 'entidad_ficha'], ['eval_dependencia', 'dependencia']].forEach(([campo, clave]) => { if (p[clave]) d[campo] = p[clave]; });
+}
+
 async function datosParaEnviar(id, datos) {
   const d = Esquema.limpiarOcultos(datos);
   if (datos.id_solicitud) d.id_solicitud = datos.id_solicitud;
+  aplicarPerfilActual(d);
   ['fecha_hora_inspeccion', 'eval_previa_fecha'].forEach((k) => {
     if (d[k]) { const f = new Date(d[k]); if (!isNaN(f.getTime())) d[k] = f.toISOString(); }
   });
@@ -388,10 +404,36 @@ function reintentarPrimera() {
   setTimeout(() => { if (!APP.ultimaSync) sincronizar(true); }, 10000);
 }
 
+/**
+ * "Mis datos" se guardó en el celular pero Google aún no lo sabe (sin señal o falló): se reintenta en cada
+ * sincronización hasta que lo confirme. Así el cambio de nombre llega a TECNICOS, EVALUACIONES y SOLICITUDES.
+ * docAnterior: el documento que tenía si lo corrigió, para que Google siga a la misma persona y no cree otra.
+ */
+let _confirmandoPerfil = false;
+async function confirmarPerfil() {
+  const p = APP.perfil;
+  if (!p || !p.sinConfirmar || _confirmandoPerfil) return;
+  _confirmandoPerfil = true;
+  try {
+    const cuerpo = quienSoy();
+    if (p.docAnterior) cuerpo.anterior = { num_doc: p.docAnterior };
+    const r = await api('ingresar', cuerpo);
+    if (APP.perfil !== p) return;                       // otra persona ingresó mientras tanto
+    if (r.entidad_ficha) p.entidad_ficha = r.entidad_ficha;
+    if (r.dependencia) p.dependencia = r.dependencia;
+    delete p.sinConfirmar;
+    delete p.docAnterior;
+    await DB.guardarKV('perfil', p);
+    await guardarListas(r.listas);
+  } catch (e) { /* sigue pendiente: se vuelve a intentar en la próxima sincronización */ }
+  finally { _confirmandoPerfil = false; }
+}
+
 async function sincronizar(silencioso) {
   if (APP.sincronizando || !APP.perfil) return;
   APP.sincronizando = true;
   pintarConexion();
+  confirmarPerfil();                        // de fondo: no retrasa la lista
   if (!APP.ultimaSync) pintarInicio();      // persona nueva: que la lista diga "Descargando…", no "sin visitas"
   // (02/10) La cola se envía DE FONDO. Antes se esperaba aquí: con mala señal cada foto
   // espera 45 s por intento (3 intentos) y el catálogo ni siquiera se pedía; la app

@@ -523,19 +523,16 @@ function enlazarMenu() {
     ev.preventDefault();
     const nuevo = leerPerfil(ev.target);
     if (!nuevo.entidad_ficha || !nuevo.dependencia) { toast('Elija o escriba su entidad y su dependencia.', 'error'); return; }
+    const antes = quienSoy();
     Object.assign(APP.perfil, nuevo);
     await olvidarVersion();        // cambió quién es: el próximo catálogo, completo
     if (firmaPendiente) APP.perfil.firma = firmaPendiente;
-    // Con señal, se normaliza y entra a la lista de una vez; sin señal, se
-    // normaliza cuando llegue la primera evaluación.
-    api('ingresar', quienSoy())
-      .then(async (r) => {
-        if (r.entidad_ficha) APP.perfil.entidad_ficha = r.entidad_ficha;
-        if (r.dependencia) APP.perfil.dependencia = r.dependencia;
-        await DB.guardarKV('perfil', APP.perfil);
-        await guardarListas(r.listas);
-      }).catch(() => {});
+    // Queda "sin confirmar" hasta que Google lo reciba: con señal, de una vez; sin señal, en la próxima
+    // sincronización. Si corrigió el documento, se guarda el que tenía para que Google siga a la misma persona.
+    APP.perfil.sinConfirmar = true;
+    if (antes.num_doc && antes.num_doc !== nuevo.num_doc && !APP.perfil.docAnterior) APP.perfil.docAnterior = antes.num_doc;
     await DB.guardarKV('perfil', APP.perfil);
+    confirmarPerfil();
     toast('Datos guardados. Se usarán en sus evaluaciones sin enviar.', 'ok');
     cerrarMenu();
     // Si estaba en una ficha (vino desde la sección 16), se refresca con los datos nuevos.

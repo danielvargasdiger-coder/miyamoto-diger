@@ -12,6 +12,23 @@
   <link rel="apple-touch-icon" href="img/icon-192.png">
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="styles.css">
+  <script>
+    /* Propuesta de diseño (08/10): SOLO con ?diseno=nuevo (se recuerda en la pestaña). Sin eso, nada cambia. */
+    (function () {
+      var nuevo = /[?&]diseno=nuevo/.test(location.search);
+      try {
+        if (/[?&]diseno=actual/.test(location.search)) sessionStorage.removeItem('diseno');
+        else if (nuevo) sessionStorage.setItem('diseno', 'nuevo');
+        else nuevo = sessionStorage.getItem('diseno') === 'nuevo';
+      } catch (e) {}
+      if (!nuevo) return;
+      document.write('<link rel="stylesheet" href="diseno-nuevo.css">');
+      document.addEventListener('DOMContentLoaded', function () {
+        var b = document.getElementById('buscar');
+        if (b) b.placeholder = 'Buscar dirección, barrio o ficha';
+      });
+    })();
+  </script>
 </head>
 <body>
   <div id="cinta-entorno" class="cinta-entorno"></div>

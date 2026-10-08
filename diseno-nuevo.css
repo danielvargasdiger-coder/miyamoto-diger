@@ -1,0 +1,244 @@
+/* =========================================================================
+   PROPUESTA DE DISEÑO (08/10/2026) — SOLO se carga con ?diseno=nuevo
+   (ver el cargador en index.html). Sin ese parámetro la app no cambia.
+   Pulido, no rediseño: misma paleta (azul petróleo + semáforo DIGER), mismos
+   logos, misma forma de usarla. Va DESPUÉS de styles.css y solo ajusta.
+   ========================================================================= */
+:root {
+  --sombra: 0 1px 2px rgba(16, 32, 44, .06), 0 4px 12px -2px rgba(16, 32, 44, .10);
+  --sombra-alta: 0 2px 4px rgba(6, 58, 80, .12), 0 10px 24px -6px rgba(6, 58, 80, .32);
+  --radio: 14px;
+  --segmento: #d9e3ea;
+  --salida: cubic-bezier(.22, 1, .36, 1);            /* ease-out exponencial */
+}
+
+/* ------------------------------------------------ superficies del navegador */
+::selection { background: #cfe3ee; color: var(--azul-oscuro); }
+input, textarea { caret-color: var(--azul); }
+input[type="checkbox"], input[type="radio"], input[type="range"], progress { accent-color: var(--azul); }
+html { scrollbar-color: #b9c8d2 transparent; scrollbar-width: thin; }
+:focus-visible { outline: 3px solid var(--inst-amarillo); outline-offset: 2px; }
+.cuenta, .t-id, .tablero b, .tablero td { font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------ respuesta al toque */
+/* Todo lo que se toca responde al instante: baja un poco y vuelve (Emil: el botón
+   debe sentirse físico). Solo transform: barato y suave en celulares viejos. */
+.btn-principal, .btn-secundario, .btn-peligro, .btn-claro, .btn-icono, .fab, .pestana, .btn-vista, .chip, .paso, .tarjeta {
+  transition: transform 160ms var(--salida), background-color 200ms var(--salida), color 200ms var(--salida),
+    box-shadow 200ms var(--salida), border-color 200ms var(--salida);
+}
+.btn-principal:active, .btn-secundario:active, .btn-peligro:active, .btn-claro:active, .chip:active, .paso:active { transform: scale(.97); }
+.btn-icono:active, .btn-vista:active, .pestana:active { transform: scale(.94); }
+.fab:active { transform: scale(.95); box-shadow: 0 2px 6px rgba(6, 58, 80, .3); }
+
+/* ------------------------------------------------ barra superior */
+.topbar { background: var(--azul-oscuro); background-image: linear-gradient(180deg, var(--azul) 0%, var(--azul-oscuro) 100%); }
+.topbar-titulo b { font-size: 1.12rem; letter-spacing: -.01em; }
+.topbar-titulo span { opacity: .78; }
+
+
+/* ------------------------------------------------ buscador */
+.buscador input#buscar { border: 0; background: #fff; box-shadow: var(--sombra); min-height: 48px; border-radius: 24px; }
+.buscador input#buscar::placeholder { color: #6a7b89; }
+.buscador input:focus { box-shadow: 0 0 0 2px var(--azul), var(--sombra); }
+
+/* ------------------------------------------------ pestañas: control segmentado */
+/* Las tres caben siempre a 375 px (antes "Borradores" se cortaba). La elegida se
+   levanta en blanco; el color fuerte queda para las acciones. */
+.pestanas { gap: 0; padding-top: 12px; padding-bottom: 6px; }
+.pestanas::before {
+  content: ""; position: absolute; inset: 12px 16px 6px; background: var(--segmento); border-radius: 14px; z-index: -1;
+}
+.pestanas { isolation: isolate; }
+.pestana {
+  border: 0; background: transparent; border-radius: 11px; margin: 3px; min-height: 42px; padding: 0 6px;
+  color: var(--texto-suave); font-size: .9rem;
+}
+.pestana[aria-selected="true"] { background: #fff; color: var(--azul-oscuro); box-shadow: 0 1px 2px rgba(16, 32, 44, .12), 0 2px 8px -2px rgba(16, 32, 44, .16); }
+.cuenta { background: rgba(11, 79, 108, .10); color: inherit; font-weight: 700; }
+.pestana[aria-selected="true"] .cuenta { background: var(--azul); color: #fff; }
+
+/* ------------------------------------------------ tarjetas de visita */
+.lista { gap: 14px; }
+.tarjeta { border: 0; box-shadow: var(--sombra); padding: 14px 16px 12px; }
+.tarjeta:active { transform: scale(.992); }
+.tarjeta h3 { font-size: 1.12rem; font-weight: 750; letter-spacing: -.01em; margin: 10px 0 2px; }
+.t-lugar { font-size: .88rem; }
+/* La descripción en dos líneas: la lista se recorre más rápido en campo. */
+.t-desc { color: #33444f; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.t-pie { border-top: 1px solid #edf1f4; margin-top: 12px; padding-top: 10px; }
+.t-enlaces .btn-texto { padding: 6px 2px; font-size: .92rem; }
+.prioridad { font-size: .7rem; letter-spacing: .04em; padding: 3px 9px; }
+.p-alta { background: #fde2e2; color: #a1000b; box-shadow: inset 0 0 0 1px rgba(161, 0, 11, .18); }
+.p-media { background: #fff1d6; color: #7a4200; box-shadow: inset 0 0 0 1px rgba(122, 66, 0, .18); }
+.p-baja { background: #e3f2e5; color: #1b5e20; box-shadow: inset 0 0 0 1px rgba(27, 94, 32, .18); }
+.asignada { background: #e7f1f6; }
+.t-pie > .btn-principal { min-height: 44px; padding: 8px 16px; border-radius: 12px; }
+.en-cola { border-left: 0; box-shadow: inset 0 0 0 1.5px var(--azul), var(--sombra); }
+
+/* ------------------------------------------------ botón Nueva */
+.fab { box-shadow: var(--sombra-alta); height: 54px; padding: 0 20px 0 16px; letter-spacing: .01em; }
+
+/* ------------------------------------------------ navegación de abajo (celular) */
+@media (max-width: 760px) {
+  .topbar-vistas { box-shadow: 0 -1px 0 #e3eaef, 0 -6px 18px -8px rgba(16, 32, 44, .18); border-top: 0; }
+  .btn-vista { position: relative; font-weight: 600; }
+  .btn-vista[aria-current="page"] { background: transparent; color: var(--azul); }
+  /* Indicador: una barra corta sobre el ícono de la vista actual. */
+  .btn-vista[aria-current="page"]::before {
+    content: ""; position: absolute; top: 2px; left: 50%; width: 28px; height: 3px; border-radius: 0 0 3px 3px;
+    background: var(--azul); transform: translateX(-50%);
+  }
+  .btn-vista .ico { width: 24px; height: 24px; }
+}
+
+/* ------------------------------------------------ formulario */
+.paso { transition: transform 160ms var(--salida), background-color 200ms var(--salida); }
+
+/* =========================================================================
+   TODAS LAS SECCIONES (segunda ronda, 08/10)
+   ========================================================================= */
+
+/* ------------------------------------------------ superficies comunes */
+/* Una sola familia de "cajas": sin borde gris, sombra suave con desplazamiento, radio 14. */
+.campo, .panel, .panel-mapa, .faltan, .ingreso-caja, .selector-item, .fallo-caja, .qr-caja, .solo-lectura {
+  border: 0; box-shadow: var(--sombra); border-radius: var(--radio);
+}
+.campo.compacto { box-shadow: none; border: 1.5px dashed #c3d1db; }
+.campo.resaltar { box-shadow: 0 0 0 3px var(--inst-amarillo), var(--sombra); }
+
+/* Campos de texto: mismo radio que los botones; el borde se aclara y el foco se ve. */
+input:not([type="file"]), select, textarea { border-radius: 12px; border-color: #c9d6df; background: #fbfcfd; }
+input:focus, select:focus, textarea:focus { background: #fff; border-color: var(--azul); box-shadow: 0 0 0 3px rgba(11, 79, 108, .16); }
+input::placeholder, textarea::placeholder { color: #6a7b89; }
+.campo-signo { border-radius: 12px; border-color: #c9d6df; background: #fbfcfd; }
+@media (hover: hover) { input:not([type="file"]):hover, select:hover, textarea:hover { border-color: #a9bcc9; } }
+
+/* ------------------------------------------------ ingreso */
+.ingreso { background: radial-gradient(120% 60% at 50% 0%, #d6e8f1 0%, var(--fondo) 70%); }
+.ingreso-caja { padding: 26px 22px 22px; box-shadow: 0 2px 4px rgba(6, 58, 80, .06), 0 18px 40px -12px rgba(6, 58, 80, .28); }
+.ingreso h1 { font-size: 1.4rem; letter-spacing: -.015em; }
+.paso-ingreso span { box-shadow: 0 0 0 3px rgba(11, 79, 108, .14); }
+
+/* ------------------------------------------------ menú */
+.menu-cuerpo { gap: 16px; }
+.iniciales { background: linear-gradient(160deg, var(--azul), var(--azul-oscuro)); box-shadow: 0 0 0 3px #fff, 0 0 0 5px rgba(11, 79, 108, .2); }
+/* Las iniciales salían grises sobre el azul: ".menu-yo span" (texto de abajo del nombre) les ganaba. */
+.menu-yo .iniciales { color: #fff; font-size: 1.1rem; }
+
+/* ------------------------------------------------ cabeceras de pantalla completa */
+.ficha-cab { background: var(--azul-oscuro); background-image: linear-gradient(180deg, var(--azul) 0%, var(--azul-oscuro) 100%); }
+.semaforo { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); transition: background-color 240ms var(--salida), color 240ms var(--salida); }
+.progreso { height: 3px; background: rgba(11, 79, 108, .12); }
+#barra-progreso { border-radius: 0 3px 3px 0; }
+
+/* ------------------------------------------------ pasos del formulario */
+.ficha-indice { padding: 10px 12px; gap: 8px; box-shadow: 0 1px 0 #e3eaef; border-bottom: 0; }
+.paso { width: 36px; height: 36px; font-size: .86rem; }
+/* El paso actual se levanta con un anillo: se distingue de "completo" sin mirar el número. */
+.paso[aria-current="step"] { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--azul); }
+
+/* ------------------------------------------------ cuerpo del formulario */
+.sec-titulo { font-size: 1.25rem; letter-spacing: -.015em; margin: 6px 0 14px; }
+.sec-n { box-shadow: 0 0 0 3px rgba(11, 79, 108, .14); }
+.campos { gap: 12px; }
+.campo { padding: 14px; }
+.c-fijo { border-radius: 10px; background: #eef3f6; }
+.ficha-pie { box-shadow: 0 -1px 0 #e3eaef, 0 -8px 20px -12px rgba(16, 32, 44, .2); border-top: 0; }
+.ficha-pie > button { border-radius: 12px; }
+
+/* Opciones (chips): más aire, el elegido con su marca. */
+.chip { border-color: #c9d6df; background: #fbfcfd; }
+.chip[aria-checked="true"] { box-shadow: 0 1px 2px rgba(6, 58, 80, .2); }
+@media (hover: hover) { .chip:not([aria-checked="true"]):hover { border-color: var(--azul); background: #f2f7fa; } }
+
+/* Secciones 9 y 10: las casillas N/L · M · S, con respuesta al toque. */
+.nl { border-radius: 10px; transition: transform 160ms var(--salida), opacity 200ms var(--salida), box-shadow 200ms var(--salida); }
+.nl:active { transform: scale(.94); }
+.nl[aria-checked="true"] { box-shadow: 0 0 0 2px #1d2a33 inset, 0 2px 6px -2px rgba(0, 0, 0, .35); }
+
+/* GPS y sugerencia: sin franja gruesa de color a la izquierda; fondo de color + borde fino del mismo tono. */
+.gps-dato { border-left: 0; border-radius: 12px; box-shadow: inset 0 0 0 1px #d7e1e8; }
+.gps-dato.ok { box-shadow: inset 0 0 0 1.5px rgba(18, 161, 80, .45); }
+.gps-dato.regular { box-shadow: inset 0 0 0 1.5px rgba(224, 184, 0, .6); }
+.gps-dato.malo { box-shadow: inset 0 0 0 1.5px rgba(227, 0, 15, .45); }
+.sugerencia { border-left: 0; box-shadow: inset 0 0 0 1px #d7e1e8; }
+.sugerencia.s-verde { box-shadow: inset 0 0 0 1.5px rgba(18, 161, 80, .45); }
+.sugerencia.s-amarillo { box-shadow: inset 0 0 0 1.5px rgba(224, 184, 0, .6); }
+.sugerencia.s-rojo { box-shadow: inset 0 0 0 1.5px rgba(227, 0, 15, .45); }
+.aviso-precision { border: 0; box-shadow: inset 0 0 0 1.5px rgba(198, 40, 40, .5); }
+.gps-mapa { border: 0; border-radius: 12px; box-shadow: inset 0 0 0 1px #d7e1e8; }
+.tarjeta-solicitud, .aviso-suave { box-shadow: inset 0 0 0 1px #d2e3ec; }
+
+/* Fotos: miniaturas redondeadas que se levantan, botón de quitar más visible. */
+.mini { border: 0; border-radius: 12px; box-shadow: 0 1px 2px rgba(16, 32, 44, .12), 0 4px 10px -4px rgba(16, 32, 44, .25); }
+.mini-quitar { background: rgba(10, 25, 35, .72); }
+
+/* Barrio / selector */
+.elegir-zona { border-radius: 12px; border-color: #c9d6df; background: #fbfcfd; }
+.selector-item { margin-bottom: 8px; }
+.selector-item.elegido { box-shadow: inset 0 0 0 2px var(--azul), var(--sombra); }
+.selector-buscar, .selector-pie { box-shadow: 0 1px 0 #e3eaef; border: 0; }
+.selector-buscar input { border-radius: 24px; }
+
+/* Revisar y enviar */
+.faltan { box-shadow: inset 0 0 0 1.5px rgba(198, 40, 40, .55), var(--sombra); }
+.btn-faltante { border-radius: 10px; }
+.resumen-clasif { box-shadow: var(--sombra); }
+
+/* Croquis y firma */
+.croquis-herramientas { box-shadow: 0 1px 0 #e3eaef; border-bottom: 0; }
+.btn-herr { border-radius: 10px; border-color: #c9d6df; }
+.firma-zona canvas { border-radius: 14px; border-color: #b9c8d2; box-shadow: var(--sombra); }
+.firma-muestra { border: 0; border-radius: 12px; box-shadow: inset 0 0 0 1px #d7e1e8; }
+
+/* ------------------------------------------------ ventanas, carga y avisos */
+/* La ventana de confirmación aparece desde un poco más pequeña y transparente (Emil: nunca desde scale(0)). */
+.dialogo { border-radius: 18px; padding: 22px 20px 18px; box-shadow: 0 24px 60px -12px rgba(6, 30, 45, .45); }
+.dialogo[open] { animation: aparecer 220ms var(--salida); }
+.dialogo::backdrop { background: rgba(8, 22, 32, .52); }
+.dialogo h2 { font-size: 1.18rem; letter-spacing: -.01em; }
+.dialogo-botones .btn-principal, .dialogo-botones .btn-secundario, .dialogo-botones .btn-peligro { border-radius: 12px; }
+@keyframes aparecer { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: none; } }
+.toast { border-radius: 14px; box-shadow: 0 10px 30px -8px rgba(0, 0, 0, .45); transition: opacity 220ms var(--salida), transform 260ms var(--salida); }
+.aviso-pendientes { border: 0; box-shadow: inset 0 0 0 1.5px rgba(232, 163, 61, .7); }
+
+/* ------------------------------------------------ mapa */
+.chip-mapa { box-shadow: var(--sombra); border: 0; background: #fff; }
+.chip-mapa[aria-checked="true"] { box-shadow: 0 1px 2px rgba(6, 58, 80, .25); }
+.btn-mapa-yo { box-shadow: var(--sombra-alta); }
+.btn-mapa-yo:active { transform: scale(.95); }
+.mapa-vacio { border-radius: 14px; box-shadow: var(--sombra-alta); }
+.leaflet-popup-content-wrapper { border-radius: 14px; box-shadow: 0 12px 30px -8px rgba(6, 30, 45, .4); }
+
+/* ------------------------------------------------ tablero */
+.tablero { gap: 16px; }
+.filtro-caja { border-radius: 10px; border-color: #c9d6df; height: 40px; }
+/* Cifras: sin franja gruesa a la izquierda; el color va en un punto junto al nombre. */
+.cifra { border: 0; box-shadow: var(--sombra); padding: 12px 14px; }
+.cifra b { font-size: 1.75rem; letter-spacing: -.02em; }
+.cifra span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; background: var(--azul); }
+.cifra.c-rojo span::before { background: var(--rojo); }
+.cifra.c-amarillo span::before { background: #e0b800; }
+.cifra.c-verde span::before { background: var(--verde); }
+.cifra.c-total { box-shadow: var(--sombra-alta); }
+.cifra.c-total span::before { background: #cfe3ec; }
+.cifra.marcada { outline: 0; box-shadow: inset 0 0 0 2px var(--azul), var(--sombra); background: #f3f8fb; }
+.barra-pista { height: 12px; border-radius: 6px; background: #edf2f5; }
+.barra { border-radius: 6px; }
+button.barra-fila { border-radius: 8px; }
+button.barra-fila[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px var(--azul); background: #eaf3f8; }
+.columnas .col span { border-radius: 3px 3px 0 0; }
+.chip-filtro { box-shadow: 0 1px 2px rgba(6, 58, 80, .12); }
+.fila-eval { border-bottom-color: #edf1f4; padding: 10px 0; }
+.mapa-tablero { border-radius: 12px; }
+.btn-agrandar { border: 0; border-radius: 9px; box-shadow: var(--sombra); }
+
+/* ------------------------------------------------ sin movimiento si la persona lo pidió */
+@media (prefers-reduced-motion: reduce) {
+  .dialogo[open] { animation: none; }
+  .nl:active, .btn-mapa-yo:active { transform: none; }
+  * { transition: none !important; }
+  .btn-principal:active, .btn-secundario:active, .btn-icono:active, .btn-vista:active, .pestana:active,
+  .fab:active, .chip:active, .paso:active, .tarjeta:active { transform: none; }
+}

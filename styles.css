@@ -109,6 +109,14 @@ body.modo-demo, body.entorno-pruebas { --alto-cinta: 22px; padding-top: var(--al
 .girando .ico { animation: girar 1s linear infinite; }
 @keyframes girar { to { transform: rotate(360deg); } }
 .estado-conexion { font-size: .8rem; color: var(--texto-suave); padding: 6px 16px 0; max-width: var(--ancho-app); margin: 0 auto; }
+/* Punto de estado (data-estado lo pone pintarConexion): verde al día, naranja con fichas por enviar, gris sin señal. */
+.estado-conexion:not(:empty) { display: flex; }
+.estado-conexion:not(:empty)::before {
+  content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; margin: 6px 7px 0 0; background: var(--inst-verde);
+  box-shadow: 0 0 0 3px rgba(63, 140, 84, .18);
+}
+.estado-conexion[data-estado="cola"]::before { background: #d98a1c; box-shadow: 0 0 0 3px rgba(217, 138, 28, .2); }
+.estado-conexion[data-estado="sin-senal"]::before { background: #8a99a6; box-shadow: 0 0 0 3px rgba(138, 153, 166, .2); }
 
 /* ------------------------------------------------------------ PESTAÑAS Y LISTA */
 .pestanas {

@@ -432,7 +432,11 @@ function estadoDeConexion() {
 
 function pintarConexion() {
   const el = $('#estado-conexion');
-  if (el) el.textContent = APP.sincronizando ? 'Sincronizando…' : estadoDeConexion();
+  if (el) {
+    el.textContent = APP.sincronizando ? 'Sincronizando…' : estadoDeConexion();
+    // Para el color del punto (diseño nuevo): verde al día, naranja con cola o sincronizando, gris sin señal.
+    el.dataset.estado = !navigator.onLine ? 'sin-senal' : (APP.sincronizando || APP.cola.length) ? 'cola' : 'ok';
+  }
   const ic = $('#btn-sync');
   if (ic) ic.classList.toggle('girando', APP.sincronizando);
 }

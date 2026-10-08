@@ -10,6 +10,9 @@
    Si la señal se cae en cualquier punto, el siguiente intento retoma donde
    iba. En taludes el id lo ponía el servidor y cada reintento dejaba una
    fila huérfana sin fotos (pasó 5 veces).
+   Fase 3 (08/10/2026): los pasos 1 y 3 van a Cloudflare (/envio/guardar y /envio/cerrar)
+   y Google recibe la evaluación de Cloudflare sin que el celular espere. El camino de cada
+   evaluación (item.via) se fija una sola vez: así nunca tiene dos números.
    ========================================================================= */
 'use strict';
 
@@ -175,12 +178,48 @@ function bytesDe(dataUrl) {
   return b;
 }
 
+/** ¿Se puede entregar la evaluación a Cloudflare? (fase 3; en la demostración nunca). */
+function recibeLaNube() {
+  return typeof CONFIG !== 'undefined' && !CONFIG.DEMO && !!CONFIG.URL_NUBE;
+}
+
+/** /envio/guardar o /envio/cerrar del Worker, con lo mismo que api() le agrega a Google. */
+function alaNube(paso, cuerpo) {
+  return pedirCloudflare(CONFIG.URL_NUBE + '/envio/' + paso, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(Object.assign({ codigo: APP.perfil ? APP.perfil.codigo : '', versionApp: VERSION_APP,
+      esquema: Esquema.huella() }, cuerpo))
+  }, 45000);
+}
+
 async function enviarUna(item) {
   item.error = 'Enviando…';
   await DB.guardar('cola', item);
   pintarInicio();
 
-  const r = await api('guardar_evaluacion', { id: item.id, datos: item.datos, fotosEsperadas: item.fotos.length });
+  const cuerpo = { id: item.id, datos: item.datos, fotosEsperadas: item.fotos.length };
+  // Las de antes de la v54 que ya tienen número siguen por Google (Cloudflare no conoce ese número).
+  if (!item.via && item.num_formulario) item.via = 'google';
+  let r;
+  if (item.via === 'nube') r = await alaNube('guardar', cuerpo);
+  else if (item.via === 'google') r = await api('guardar_evaluacion', cuerpo);
+  else {
+    try {
+      if (!recibeLaNube()) throw new Error('sin Cloudflare');
+      r = await alaNube('guardar', cuerpo);
+      item.via = 'nube';
+    } catch (e) {
+      // Cloudflare no la recibió (apagado, código que no conoce, sin respuesta): por Google.
+      // Si Google tampoco responde, el camino queda sin fijar y el próximo intento prueba Cloudflare.
+      try { r = await api('guardar_evaluacion', cuerpo); }
+      catch (g) {
+        // Se demoró o respondió raro: la petición SÍ llegó a Google y pudo darle número. Desde aquí, solo Google.
+        if (g.tiempoAgotado || g.respuestaRara) item.via = 'google';
+        throw g;
+      }
+      item.via = 'google';
+    }
+  }
   item.num_formulario = r.num_formulario;
   const nube = r.subida || null;          // fase 1: con esto las fotos van a Cloudflare
   const yaEstan = new Set(r.fotosRecibidas || []);
@@ -191,7 +230,8 @@ async function enviarUna(item) {
   }
   await DB.guardar('cola', item);
 
-  const pendientes = item.fotos.filter((f) => !yaEstan.has(f.nombre));
+  // Completa en Cloudflare (se perdió la respuesta del cierre): no hay fotos que subir, solo cerrar otra vez.
+  const pendientes = item.via === 'nube' && r.yaCompleta ? [] : item.fotos.filter((f) => !yaEstan.has(f.nombre));
   const perdidas = [];
   let hechas = item.fotos.length - pendientes.length;
   const avisar = (extra) => {
@@ -247,9 +287,8 @@ async function enviarUna(item) {
   // reintento, un tropiezo de señal aquí ya no deja la evaluación a medias.
   item.error = 'Cerrando el envío…';
   pintarInicio();
-  const cierre = await conReintentoDeRed(() => api('cerrar_evaluacion', {
-    id: item.id, fotos: item.fotos.map((f) => f.nombre).filter((x) => perdidas.indexOf(x) === -1)
-  }));
+  const paraCerrar = { id: item.id, fotos: item.fotos.map((f) => f.nombre).filter((x) => perdidas.indexOf(x) === -1) };
+  const cierre = await conReintentoDeRed(() => (item.via === 'nube' ? alaNube('cerrar', paraCerrar) : api('cerrar_evaluacion', paraCerrar)));
   if (cierre.faltan && cierre.faltan.length) {
     // El servidor no tiene todas: se queda en cola y el próximo intento
     // sube solo las que faltan (guardar_evaluacion dice cuáles ya están).

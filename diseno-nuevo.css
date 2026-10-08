@@ -5,10 +5,13 @@
    logos, misma forma de usarla. Va DESPUÉS de styles.css y solo ajusta.
    ========================================================================= */
 :root {
-  --sombra: 0 1px 2px rgba(16, 32, 44, .06), 0 4px 12px -2px rgba(16, 32, 44, .10);
+  /* Contraste (08/10): el fondo era #f4f7f9 y el blanco de tarjetas y buscador casi no se distinguía (1,07:1,
+     peor en PC). Fondo más oscuro + un filo de 1px en cada sombra: lo blanco se lee como tarjeta. */
+  --fondo: #e4ebf0;
+  --sombra: 0 0 0 1px rgba(16, 32, 44, .12), 0 1px 2px rgba(16, 32, 44, .08), 0 4px 12px -2px rgba(16, 32, 44, .14);
   --sombra-alta: 0 2px 4px rgba(6, 58, 80, .12), 0 10px 24px -6px rgba(6, 58, 80, .32);
   --radio: 14px;
-  --segmento: #d9e3ea;
+  --segmento: #cbd8e1;
   --salida: cubic-bezier(.22, 1, .36, 1);            /* ease-out exponencial */
 }
 
@@ -38,9 +41,10 @@ html { scrollbar-color: #b9c8d2 transparent; scrollbar-width: thin; }
 
 
 /* ------------------------------------------------ buscador */
-.buscador input#buscar { border: 0; background: #fff; box-shadow: var(--sombra); min-height: 48px; border-radius: 24px; }
-.buscador input#buscar::placeholder { color: #6a7b89; }
-.buscador input:focus { box-shadow: 0 0 0 2px var(--azul), var(--sombra); }
+/* Borde de 1.5px a 3:1 contra el blanco: un campo para escribir tiene que verse como campo. */
+.buscador input#buscar { border: 1.5px solid #7f93a2; background: #fff; box-shadow: var(--sombra); min-height: 48px; border-radius: 24px; }
+.buscador input#buscar::placeholder { color: #566877; }
+.buscador input:focus { border-color: var(--azul); box-shadow: 0 0 0 2px var(--azul); }
 
 /* ------------------------------------------------ pestañas: control segmentado */
 /* Las tres caben siempre a 375 px (antes "Borradores" se cortaba). La elegida se
@@ -66,7 +70,7 @@ html { scrollbar-color: #b9c8d2 transparent; scrollbar-width: thin; }
 .t-lugar { font-size: .88rem; }
 /* La descripción en dos líneas: la lista se recorre más rápido en campo. */
 .t-desc { color: #33444f; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.t-pie { border-top: 1px solid #edf1f4; margin-top: 12px; padding-top: 10px; }
+.t-pie { border-top: 1px solid #dbe4ea; margin-top: 12px; padding-top: 10px; }
 .t-enlaces .btn-texto { padding: 6px 2px; font-size: .92rem; }
 .prioridad { font-size: .7rem; letter-spacing: .04em; padding: 3px 9px; }
 .p-alta { background: #fde2e2; color: #a1000b; box-shadow: inset 0 0 0 1px rgba(161, 0, 11, .18); }
@@ -81,7 +85,7 @@ html { scrollbar-color: #b9c8d2 transparent; scrollbar-width: thin; }
 
 /* ------------------------------------------------ navegación de abajo (celular) */
 @media (max-width: 760px) {
-  .topbar-vistas { box-shadow: 0 -1px 0 #e3eaef, 0 -6px 18px -8px rgba(16, 32, 44, .18); border-top: 0; }
+  .topbar-vistas { box-shadow: 0 -1px 0 #cfdae2, 0 -6px 18px -8px rgba(16, 32, 44, .18); border-top: 0; }
   .btn-vista { position: relative; font-weight: 600; }
   .btn-vista[aria-current="page"] { background: transparent; color: var(--azul); }
   /* Indicador: una barra corta sobre el ícono de la vista actual. */
@@ -133,7 +137,7 @@ input::placeholder, textarea::placeholder { color: #6a7b89; }
 #barra-progreso { border-radius: 0 3px 3px 0; }
 
 /* ------------------------------------------------ pasos del formulario */
-.ficha-indice { padding: 10px 12px; gap: 8px; box-shadow: 0 1px 0 #e3eaef; border-bottom: 0; }
+.ficha-indice { padding: 10px 12px; gap: 8px; box-shadow: 0 1px 0 #cfdae2; border-bottom: 0; }
 .paso { width: 36px; height: 36px; font-size: .86rem; }
 /* El paso actual se levanta con un anillo: se distingue de "completo" sin mirar el número. */
 .paso[aria-current="step"] { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--azul); }
@@ -144,7 +148,7 @@ input::placeholder, textarea::placeholder { color: #6a7b89; }
 .campos { gap: 12px; }
 .campo { padding: 14px; }
 .c-fijo { border-radius: 10px; background: #eef3f6; }
-.ficha-pie { box-shadow: 0 -1px 0 #e3eaef, 0 -8px 20px -12px rgba(16, 32, 44, .2); border-top: 0; }
+.ficha-pie { box-shadow: 0 -1px 0 #cfdae2, 0 -8px 20px -12px rgba(16, 32, 44, .2); border-top: 0; }
 .ficha-pie > button { border-radius: 12px; }
 
 /* Opciones (chips): más aire, el elegido con su marca. */
@@ -158,16 +162,16 @@ input::placeholder, textarea::placeholder { color: #6a7b89; }
 .nl[aria-checked="true"] { box-shadow: 0 0 0 2px #1d2a33 inset, 0 2px 6px -2px rgba(0, 0, 0, .35); }
 
 /* GPS y sugerencia: sin franja gruesa de color a la izquierda; fondo de color + borde fino del mismo tono. */
-.gps-dato { border-left: 0; border-radius: 12px; box-shadow: inset 0 0 0 1px #d7e1e8; }
+.gps-dato { border-left: 0; border-radius: 12px; box-shadow: inset 0 0 0 1px #bfcdd7; }
 .gps-dato.ok { box-shadow: inset 0 0 0 1.5px rgba(18, 161, 80, .45); }
 .gps-dato.regular { box-shadow: inset 0 0 0 1.5px rgba(224, 184, 0, .6); }
 .gps-dato.malo { box-shadow: inset 0 0 0 1.5px rgba(227, 0, 15, .45); }
-.sugerencia { border-left: 0; box-shadow: inset 0 0 0 1px #d7e1e8; }
+.sugerencia { border-left: 0; box-shadow: inset 0 0 0 1px #bfcdd7; }
 .sugerencia.s-verde { box-shadow: inset 0 0 0 1.5px rgba(18, 161, 80, .45); }
 .sugerencia.s-amarillo { box-shadow: inset 0 0 0 1.5px rgba(224, 184, 0, .6); }
 .sugerencia.s-rojo { box-shadow: inset 0 0 0 1.5px rgba(227, 0, 15, .45); }
 .aviso-precision { border: 0; box-shadow: inset 0 0 0 1.5px rgba(198, 40, 40, .5); }
-.gps-mapa { border: 0; border-radius: 12px; box-shadow: inset 0 0 0 1px #d7e1e8; }
+.gps-mapa { border: 0; border-radius: 12px; box-shadow: inset 0 0 0 1px #bfcdd7; }
 .tarjeta-solicitud, .aviso-suave { box-shadow: inset 0 0 0 1px #d2e3ec; }
 
 /* Fotos: miniaturas redondeadas que se levantan, botón de quitar más visible. */
@@ -178,7 +182,7 @@ input::placeholder, textarea::placeholder { color: #6a7b89; }
 .elegir-zona { border-radius: 12px; border-color: #c9d6df; background: #fbfcfd; }
 .selector-item { margin-bottom: 8px; }
 .selector-item.elegido { box-shadow: inset 0 0 0 2px var(--azul), var(--sombra); }
-.selector-buscar, .selector-pie { box-shadow: 0 1px 0 #e3eaef; border: 0; }
+.selector-buscar, .selector-pie { box-shadow: 0 1px 0 #cfdae2; border: 0; }
 .selector-buscar input { border-radius: 24px; }
 
 /* Revisar y enviar */
@@ -187,10 +191,10 @@ input::placeholder, textarea::placeholder { color: #6a7b89; }
 .resumen-clasif { box-shadow: var(--sombra); }
 
 /* Croquis y firma */
-.croquis-herramientas { box-shadow: 0 1px 0 #e3eaef; border-bottom: 0; }
+.croquis-herramientas { box-shadow: 0 1px 0 #cfdae2; border-bottom: 0; }
 .btn-herr { border-radius: 10px; border-color: #c9d6df; }
 .firma-zona canvas { border-radius: 14px; border-color: #b9c8d2; box-shadow: var(--sombra); }
-.firma-muestra { border: 0; border-radius: 12px; box-shadow: inset 0 0 0 1px #d7e1e8; }
+.firma-muestra { border: 0; border-radius: 12px; box-shadow: inset 0 0 0 1px #bfcdd7; }
 
 /* ------------------------------------------------ ventanas, carga y avisos */
 /* La ventana de confirmación aparece desde un poco más pequeña y transparente (Emil: nunca desde scale(0)). */
@@ -204,8 +208,21 @@ input::placeholder, textarea::placeholder { color: #6a7b89; }
 .aviso-pendientes { border: 0; box-shadow: inset 0 0 0 1.5px rgba(232, 163, 61, .7); }
 
 /* ------------------------------------------------ mapa */
-.chip-mapa { box-shadow: var(--sombra); border: 0; background: #fff; }
-.chip-mapa[aria-checked="true"] { box-shadow: 0 1px 2px rgba(6, 58, 80, .25); }
+/* Filtros del mapa: el mismo control segmentado de Visitas (tres partes iguales, la elegida en blanco). */
+.mapa-barra #mapa-filtros {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; padding: 3px; flex: 1 1 100%; max-width: 440px;
+  background: var(--segmento); border-radius: 14px; overflow: visible;
+}
+.chip-mapa {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; padding: 0 6px;
+  border: 0; border-radius: 11px; background: transparent; box-shadow: none; color: #3c4d5a; font-size: .9rem; font-weight: 600;
+}
+.chip-mapa[aria-checked="true"] {
+  background: #fff; color: var(--azul-oscuro); font-weight: 700;
+  box-shadow: 0 1px 2px rgba(16, 32, 44, .12), 0 2px 8px -2px rgba(16, 32, 44, .16);
+}
+.chip-mapa .cuenta { background: rgba(11, 79, 108, .12); }
+.chip-mapa[aria-checked="true"] .cuenta { background: var(--azul); color: #fff; }
 .btn-mapa-yo { box-shadow: var(--sombra-alta); }
 .btn-mapa-yo:active { transform: scale(.95); }
 .mapa-vacio { border-radius: 14px; box-shadow: var(--sombra-alta); }

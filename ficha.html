@@ -14,11 +14,11 @@
     /* min-width: si la ficha queda más ancha que la pantalla, la franja azul
        tiene que llegar hasta el final; antes se cortaba al deslizar de lado. */
     body { margin: 0; background: #eef1f4; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; min-width: fit-content; }
-    /* Celular: título arriba y los 4 botones en una sola fila pareja (antes se
-       amontonaban en 3 filas de distinto ancho). PC: todo en una fila. */
+    /* Celular: título arriba y los 2 botones en una fila pareja. PC: todo en una fila.
+       Sin "Volver" (08/10): el enlace es público y llevaba a la app a quien no es técnico. */
     .barra-ficha {
       position: sticky; top: 0; left: 0; min-width: 100%; box-sizing: border-box; z-index: 10; background: linear-gradient(135deg, #0b4f6c, #063a50); color: #fff;
-      padding: 8px 10px 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; align-items: stretch;
+      padding: 8px 10px 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; align-items: stretch;
       border-bottom: 3px solid transparent; border-image: linear-gradient(90deg, #3f8c54 0 33%, #f4bc42 33% 66%, #d93933 66%) 1;
     }
     .barra-ficha b { grid-column: 1 / -1; text-align: center; font-size: .95rem; padding: 2px 0 4px; }
@@ -34,9 +34,6 @@
       .barra-ficha button, .barra-ficha a { flex-direction: row; font-size: .9rem; padding: 8px 14px; min-height: 42px; gap: 6px; }
     }
     .barra-ficha .principal { background: #fff; color: #0b4f6c; border-color: #fff; }
-    /* Si la ficha no cargó, la barra solo sirve para devolverse. */
-    .barra-ficha.solo-volver #btn-imprimir, .barra-ficha.solo-volver #btn-copiar { display: none; }
-    .barra-ficha.solo-volver #btn-volver { grid-column: 1 / -1; }
     .barra-ficha button:disabled { opacity: .6; cursor: wait; }
     .estado { max-width: 740px; margin: 40px auto; padding: 20px; background: #fff; border-radius: 12px; text-align: center; color: #16202a; }
     .estado.error { border-left: 6px solid #c62828; }
@@ -50,8 +47,7 @@
 <body>
   <div class="barra-ficha" id="barra" hidden>
     <b id="titulo-ficha">Ficha</b>
-    <button type="button" id="btn-volver"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg><span>Volver</span></button>
-    <button type="button" class="principal" id="btn-imprimir"><svg viewBox="0 0 24 24"><path d="M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></svg>Imprimir</button>
+    <button type="button" class="principal" id="btn-imprimir"><svg viewBox="0 0 24 24"><path d="M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></svg>Guardar en PDF</button>
     <button type="button" id="btn-copiar"><svg viewBox="0 0 24 24"><path d="M9 9h10v10H9zM5 15V5h10"/></svg><span>Copiar enlace</span></button>
     <p id="aviso-copia"></p>
   </div>

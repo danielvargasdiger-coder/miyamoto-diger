@@ -16,35 +16,9 @@
   var LOGOS = { sngrd: 'img/logo-sngrd.png', miyamoto: 'img/logo-usaid-miyamoto.png', pie: 'img/logos-pie.png', entidad: 'img/logo-app.png' };
   var $ = function (s) { return document.querySelector(s); };
 
-  /**
-   * Volver. Se enlaza de una, así el botón sirve también cuando la ficha no
-   * carga. En el PC la ficha se abre en una pestaña nueva: esa se cierra,
-   * para no dejar dos pestañas de la app abiertas. Si el navegador no deja
-   * cerrarla, o si la ficha se abrió en la misma pestaña (celular), se
-   * devuelve a la pantalla anterior o a la app.
-   */
-  function enlazarVolver() {
-    $('#btn-volver').onclick = volver;
-  }
-
-  function volver() {
-    var atras = function () {
-      if (history.length > 1) history.back();
-      else location.href = './';
-    };
-    if (window.opener && !window.opener.closed) {
-      window.close();
-      setTimeout(function () { if (!window.closed) atras(); }, 400);
-      return;
-    }
-    atras();
-  }
-
   function mostrarError(texto) {
+    // Sin barra: sin ficha no hay nada que guardar ni copiar (y "Volver" ya no existe: enlace público, 08/10).
     $('#contenido').innerHTML = '<div class="estado error"><b>No se pudo abrir la ficha</b><p>' + Ficha.esc(texto) + '</p></div>';
-    $('#barra').hidden = false;
-    $('#barra').classList.add('solo-volver');
-    enlazarVolver();
   }
 
 
@@ -71,7 +45,6 @@
   function enlazarBarra(num) {
     var enlace = location.href;
     $('#titulo-ficha').textContent = 'Formulario ' + num;
-    enlazarVolver();
     $('#btn-imprimir').onclick = function () { window.print(); };
     $('#btn-copiar').onclick = function () {
       var hecho = function (ok) { $('#aviso-copia').textContent = ok ? 'Enlace copiado. Ya lo puede pegar donde lo necesite.' : 'Copie el enlace de la barra de direcciones.'; setTimeout(function () { $('#aviso-copia').textContent = ''; }, 4000); };

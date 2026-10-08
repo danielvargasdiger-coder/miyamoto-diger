@@ -16,7 +16,7 @@
  */
 const ENTORNO = self.location.pathname.indexOf('/pruebas/') !== -1 ? 'pruebas' : 'prod';
 const PREFIJO = 'miyamoto-' + ENTORNO;
-const VERSION = PREFIJO + '-v57';
+const VERSION = PREFIJO + '-v58';
 
 /**
  * Cuadritos del mapa ya vistos. NO lleva el número de versión: borrarlos en
@@ -31,7 +31,7 @@ const ARCHIVOS = [
   './',
   './index.html',
   './styles.css',
-  './diseno-nuevo.css',          // propuesta de diseño: solo se aplica con ?diseno=nuevo
+  './diseno-nuevo.css',          // diseño nuevo, va encima de styles.css
   './config.js',
   './manifest.json',
   './js/esquema.js',

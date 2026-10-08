@@ -12,23 +12,7 @@
   <link rel="apple-touch-icon" href="img/icon-192.png">
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="styles.css">
-  <script>
-    /* Propuesta de diseño (08/10): SOLO con ?diseno=nuevo (se recuerda en la pestaña). Sin eso, nada cambia. */
-    (function () {
-      var nuevo = /[?&]diseno=nuevo/.test(location.search);
-      try {
-        if (/[?&]diseno=actual/.test(location.search)) sessionStorage.removeItem('diseno');
-        else if (nuevo) sessionStorage.setItem('diseno', 'nuevo');
-        else nuevo = sessionStorage.getItem('diseno') === 'nuevo';
-      } catch (e) {}
-      if (!nuevo) return;
-      document.write('<link rel="stylesheet" href="diseno-nuevo.css">');
-      document.addEventListener('DOMContentLoaded', function () {
-        var b = document.getElementById('buscar');
-        if (b) b.placeholder = 'Buscar dirección, barrio o ficha';
-      });
-    })();
-  </script>
+  <link rel="stylesheet" href="diseno-nuevo.css"><!-- diseño nuevo (08/10/2026), va encima de styles.css -->
 </head>
 <body>
   <div id="cinta-entorno" class="cinta-entorno"></div>
@@ -99,7 +83,7 @@
     <div id="estado-conexion" class="estado-conexion"></div>
     <div class="buscador" role="search">
       <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
-      <input type="search" id="buscar" placeholder="Buscar dirección, barrio, No. de ficha o persona" enterkeyhint="search" autocomplete="off" aria-label="Buscar">
+      <input type="search" id="buscar" placeholder="Buscar dirección, barrio o ficha" enterkeyhint="search" autocomplete="off" aria-label="Buscar">
       <button type="button" id="buscar-limpiar" class="btn-icono" aria-label="Borrar la búsqueda" hidden>
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>

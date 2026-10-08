@@ -33,6 +33,11 @@ function pintarInstalarIngreso() {
   ayuda.hidden = true;
 }
 
+/** Vivía en descargas.js (se borró con el botón PDF, 08/10); solo la usa la ayuda de instalar. */
+function esIPhoneOIPad() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 function textoAyudaInstalar() {
   // Sin el símbolo ⋮: muchas fuentes de celular no lo traen y sale un cuadrito.
   return esIPhoneOIPad()

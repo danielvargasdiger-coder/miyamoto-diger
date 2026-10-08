@@ -285,16 +285,57 @@ function explicarFallo(e) {
   return 'No se pudo conectar con el servidor.';
 }
 
+/**
+ * Catálogo desde Cloudflare (fase 2, 08/10/2026): una copia de la hoja que responde en
+ * menos de 1 s, y "sin cambios" si la versión es la misma. null = pedírselo a Google,
+ * como antes: sin señal, Cloudflare caído, puente detenido (usarGoogle) o código que
+ * Cloudflare no reconoce (Google es el dueño de los códigos y lo confirma).
+ */
+const ESPERA_NUBE = 15000;
+async function catalogoDeLaNube() {
+  try {
+    if (CONFIG.DEMO || !CONFIG.URL_NUBE) return null;
+    return await pedirCloudflare(CONFIG.URL_NUBE + '/catalogo', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ codigo: APP.perfil ? APP.perfil.codigo : '', version: APP.versionCatalogo || '' }, quienSoy()))
+    }, ESPERA_NUBE);
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Cambió quién usa el celular (ingresar, Mis datos, Salir): la versión se olvida en memoria
+ * Y en lo guardado. Si no, al reabrir la app Cloudflare respondería "sin cambios" y quedaría
+ * la lista filtrada para la persona anterior (revisión 08/10).
+ */
+async function olvidarVersion() {
+  APP.versionCatalogo = '';
+  const cat = await DB.leerKV('catalogo');
+  if (cat && cat.version) await DB.guardarKV('catalogo', Object.assign(cat, { version: '' }));
+}
+
+/** Cloudflare dice que nada cambió: lo guardado sigue valiendo; solo cambia la hora. */
+async function marcarSinCambios(ms) {
+  APP.ultimaSync = new Date().toISOString();
+  APP.ultimaSyncMs = ms || null;
+  APP.primeraSyncFallo = false;
+  const cat = (await DB.leerKV('catalogo')) || {};
+  await DB.guardarKV('catalogo', Object.assign(cat, { cuando: APP.ultimaSync, ms: APP.ultimaSyncMs }));
+}
+
 /** Deja el catálogo en la app y en el celular. ms: lo que tardó, para verlo en el estado. */
 async function aplicarCatalogo(r, ms) {
   APP.solicitudes = r.solicitudes || [];
   APP.historial = r.evaluaciones || [];
+  APP.versionCatalogo = r.version || '';          // el de Google no trae versión: la próxima, Cloudflare manda todo
   await guardarListas(r.listas);
   APP.ultimaSync = new Date().toISOString();
   APP.ultimaSyncMs = ms || null;
   APP.primeraSyncFallo = false;
   _reintentosPrimera = 0;
-  await DB.guardarKV('catalogo', { solicitudes: APP.solicitudes, historial: APP.historial, cuando: APP.ultimaSync, ms: APP.ultimaSyncMs });
+  await DB.guardarKV('catalogo', { solicitudes: APP.solicitudes, historial: APP.historial, cuando: APP.ultimaSync, ms: APP.ultimaSyncMs,
+    version: APP.versionCatalogo });
   // Lo que el servidor ya devuelve deja de hacer falta en el historial local.
   const ids = new Set(APP.historial.map((h) => h.id));
   const locales = ((await DB.leerKV('enviadasLocal')) || []).filter((e) => !ids.has(e.id));
@@ -323,8 +364,10 @@ async function sincronizar(silencioso) {
   }, () => {});
   try {
     const t0 = Date.now();
-    const r = await api('catalogo', quienSoy(), ESPERA_CATALOGO);
-    await aplicarCatalogo(r, Date.now() - t0);
+    const n = await catalogoDeLaNube();
+    if (n && n.sinCambios) await marcarSinCambios(Date.now() - t0);
+    else if (n) await aplicarCatalogo(n, Date.now() - t0);
+    else await aplicarCatalogo(await api('catalogo', quienSoy(), ESPERA_CATALOGO), Date.now() - t0);
     if (!silencioso) toast('Sincronizado', 'ok');
   } catch (e) {
     if (!APP.ultimaSync) { APP.primeraSyncFallo = true; reintentarPrimera(); }

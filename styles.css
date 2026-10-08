@@ -148,6 +148,7 @@ body.modo-demo, body.entorno-pruebas { --alto-cinta: 22px; padding-top: var(--al
 .sin-asignar { font-size: .74rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #eceff1; color: var(--texto-suave); }
 .lista .vacio { grid-column: 1 / -1; }
 .t-pie > .btn-principal { margin-left: auto; }
+.t-pie > [data-ficha] { margin-left: auto; }   /* Enviadas: "Abrir ficha" a la derecha (sin el botón PDF) */
 .t-enlaces { display: flex; flex-wrap: wrap; gap: 2px 12px; min-width: 0; }
 .paso-ingreso { display: flex; align-items: center; gap: 8px; font-size: 1rem; margin: 18px 0 6px; color: var(--azul); }
 .paso-ingreso:first-child { margin-top: 4px; }
@@ -639,15 +640,6 @@ button.cifra:hover { box-shadow: var(--sombra); }
 .compartir-botones { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .compartir-botones > * { min-height: 44px; }
 .bloque-compartir .btn-principal { width: 100%; max-width: 320px; }
-.archivo-listo {
-  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 105;
-  display: flex; align-items: center; gap: 10px; background: #1f2d38; color: #fff; padding: 10px 12px 10px 16px; border-radius: 12px;
-  width: min(520px, calc(100vw - 32px)); box-shadow: 0 6px 20px rgba(0,0,0,.3);
-}
-.archivo-listo span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.archivo-listo button { border: 0; border-radius: 8px; padding: 8px 14px; font-weight: 700; cursor: pointer; }
-#btn-archivo-guardar { background: #fff; color: var(--azul); }
-#btn-archivo-cerrar { background: transparent; color: #fff; font-size: 1.3rem; padding: 4px 8px; }
 
 /* ------------------------------------------------------------ iPHONE (solo Safari de iOS) */
 @supports (-webkit-touch-callout: none) {

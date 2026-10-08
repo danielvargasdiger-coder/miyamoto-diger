@@ -207,7 +207,7 @@ function htmlEnviadas() {
       '<h3>' + esc(h.direccion || 'Sin dirección') + '</h3>' +
       '<p class="t-lugar">' + esc([h.barrio, h.municipio].filter(Boolean).join(' · ')) + '</p>' +
       '<p class="t-desc">' + esc([fechaBonita(h.fecha), h.evaluador].filter(Boolean).join(' · ')) + '</p>' +
-      (h.ficha_url ? '<div class="t-pie"><button type="button" class="btn-texto" data-pdf="' + esc(h.id) + '">' + icono('descargar') + 'PDF</button>' +
+      (h.ficha_url ? '<div class="t-pie">' +
         '<a class="btn-secundario btn-chico" data-ficha target="_blank" href="' + esc(h.ficha_url) + '">' + icono('documento') + 'Abrir ficha</a></div>' : '') +
       '</article>');
   });
@@ -244,8 +244,6 @@ function enlazarInicio() {
       const r = await preguntar('¿Descartar el borrador?', 'Se borra de este celular con sus fotos. No se puede deshacer.',
         [['si', 'Descartar', 'peligro'], ['no', 'Conservar', '']]);
       if (r === 'si') { await borrarBorrador(t.dataset.descartar); await recargarLocales(); pintarInicio(); }
-    } else if (t.dataset.pdf) {
-      descargarPdf(t.dataset.pdf, t);
     } else if (t.dataset.verCola) {
       const c = await DB.leer('cola', t.dataset.verCola);
       abrirVistaPreviaCola(c);
@@ -261,7 +259,7 @@ async function abrirVistaPreviaCola(c) {
   const datos = Object.assign({}, c.datos);
   c.fotos.forEach((f) => { datos[f.campo] = (Array.isArray(datos[f.campo]) ? datos[f.campo] : []).map((n) => (n === f.nombre ? f.clave : n)); });
   if (datos.fecha_hora_inspeccion) datos.fecha_hora_inspeccion = ahoraLocal(new Date(datos.fecha_hora_inspeccion));
-  abrirVistaPrevia(c.id, datos, 'Esta evaluación está en cola: todavía no ha llegado al servidor. Al llegar recibe su número, y el PDF oficial queda en «Enviadas».');
+  abrirVistaPrevia(c.id, datos, 'Esta evaluación está en cola: todavía no ha llegado al servidor. Al llegar recibe su número, y la ficha oficial queda en «Enviadas».');
 }
 
 // ---------------------------------------------------------------- INGRESO Y PERFIL
@@ -437,6 +435,7 @@ async function ingresar(ev) {
     await guardarListas(r.listas);
     APP.perfil = Object.assign(perfil, { codigo, entidad: r.entidad || CONFIG.ENTIDAD });
     await DB.guardarKV('perfil', APP.perfil);
+    await olvidarVersion();        // otra persona: nada de "sin cambios" con la versión de la anterior
     let conCatalogo = false;
     if (r.catalogo) {
       // Si guardarlo falla no se pierde el ingreso: se piden aparte como antes.
@@ -525,6 +524,7 @@ function enlazarMenu() {
     const nuevo = leerPerfil(ev.target);
     if (!nuevo.entidad_ficha || !nuevo.dependencia) { toast('Elija o escriba su entidad y su dependencia.', 'error'); return; }
     Object.assign(APP.perfil, nuevo);
+    await olvidarVersion();        // cambió quién es: el próximo catálogo, completo
     if (firmaPendiente) APP.perfil.firma = firmaPendiente;
     // Con señal, se normaliza y entra a la lista de una vez; sin señal, se
     // normaliza cuando llegue la primera evaluación.
@@ -556,6 +556,7 @@ function enlazarMenu() {
     recordarPerfil(APP.perfil);
     APP.perfil = null;
     await DB.guardarKV('perfil', null);
+    await olvidarVersion();
     cerrarMenu();
     mostrarIngreso();
   });

@@ -4,7 +4,7 @@
    ========================================================================= */
 'use strict';
 
-const VERSION_APP = 'miyamoto-52';     // subirla junto con VERSION en sw.js
+const VERSION_APP = 'miyamoto-53';     // subirla junto con VERSION en sw.js
 
 const APP = {
   perfil: null,          // { codigo, entidad, nombre, tipo_doc, num_doc, id_evaluador, matricula, dependencia }
@@ -276,11 +276,6 @@ async function apiDemo(accion, p) {
       const ev = s.evaluaciones[p.id];
       if (ev) { ev.ficha_url = '#demo-ficha=' + p.id; ev.estado = 'COMPLETA'; await DB.guardarKV('demo-servidor', s); }
       return { ok: true, estado: 'COMPLETA', faltan: [], ficha_url: '#demo-ficha=' + p.id };
-    }
-    case 'pdf_evaluacion': {
-      const e = new Error('En la demostración el PDF no se arma en el servidor: toque «Abrir ficha» y luego «Imprimir / PDF».');
-      e.delServidor = true;
-      throw e;
     }
     default:
       throw new Error('Acción no disponible en demostración: ' + accion);

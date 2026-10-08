@@ -58,11 +58,14 @@ var CONFIG = (function () {
     /** Dirección pública para compartir (y para el QR, cuando se haga). */
     URL_PUBLICA: 'https://danielvargasdiger-coder.github.io/miyamoto-diger/',
 
+    /** Servidor de Cloudflare (fase 2): de aquí se lee el catálogo. Si falla, se pide a Google. */
+    URL_NUBE: 'https://diger-miyamoto.danielvargas-diger.workers.dev',
+
     /** Fotos: mismo punto medido en taludes (1200 px / 0.60 ~ 237 KB por foto). */
     ANCHO_MAX_FOTO: 1200,
     CALIDAD_FOTO: 0.60,
 
-    MINUTOS_AUTOSYNC: 10,
+    MINUTOS_AUTOSYNC: 2,
     MINUTOS_BUSCAR_ACTUALIZACION: 15,
 
     /** GPS: igual que taludes — escucha y se queda con la mejor lectura. */

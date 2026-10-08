@@ -78,21 +78,6 @@
       if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(enlace).then(function () { hecho(true); }, function () { hecho(false); });
       else hecho(false);
     };
-    // En iPhone "Imprimir" a veces no guarda PDF: este botón lo arma el servidor.
-    $('#btn-pdf').onclick = function () {
-      var b = $('#btn-pdf'), t = b.querySelector('span'); b.disabled = true; t.textContent = 'Armando…';
-      llamar('pdf_evaluacion').then(function (r) {
-        var bin = atob(r.base64), bytes = new Uint8Array(bin.length);
-        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-        var url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
-        var a = document.createElement('a'); a.href = url; a.download = r.nombre; document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
-      }).catch(function (e) {
-        $('#aviso-copia').textContent = 'No se pudo armar el PDF: ' + e.message;
-        setTimeout(function () { $('#aviso-copia').textContent = ''; }, 6000);
-      })
-        .then(function () { b.disabled = false; t.textContent = 'PDF'; });
-    };
     $('#barra').hidden = false;
   }
 

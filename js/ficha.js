@@ -63,16 +63,31 @@ var Ficha = (function () {
   function titulo(t) { return '<div class="tit">' + esc(t) + '</div>'; }
   function subt(t) { return '<div class="subt">' + esc(t) + '</div>'; }
 
+  /**
+   * Fecha y hora de COLOMBIA (UTC-5, sin horario de verano), corra donde corra: el Worker de Cloudflare corre en
+   * UTC y con getHours() la inspección de las 9:51 a. m. salía 2:51 p. m. Con "Z" o desfase se convierte; un texto
+   * sin zona ("2026-09-25T14:03") ya es la hora de pared y se lee tal cual.
+   */
   function fechaPartes(iso) {
-    var f = iso ? new Date(iso) : null;
-    if (!f || isNaN(f.getTime())) return { fecha: '', hora: '', am: false, pm: false };
-    var dd = ('0' + f.getDate()).slice(-2), mm = ('0' + (f.getMonth() + 1)).slice(-2);
-    var h = f.getHours(), mi = ('0' + f.getMinutes()).slice(-2);
-    var h12 = h % 12 === 0 ? 12 : h % 12;
-    return { fecha: dd + '/' + mm + '/' + f.getFullYear(), hora: h12 + ':' + mi, am: h < 12, pm: h >= 12 };
+    var s = iso == null ? '' : String(iso).trim();
+    var p, m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?)?$/.exec(s);
+    if (m) p = { y: +m[1], mo: +m[2], d: +m[3], h: +(m[4] || 0), mi: +(m[5] || 0) };
+    else {
+      var f = s ? new Date(s) : null;
+      if (!f || isNaN(f.getTime())) return { fecha: '', hora: '', am: false, pm: false };
+      var c = new Date(f.getTime() - 5 * 3600000);
+      p = { y: c.getUTCFullYear(), mo: c.getUTCMonth() + 1, d: c.getUTCDate(), h: c.getUTCHours(), mi: c.getUTCMinutes() };
+    }
+    var h12 = p.h % 12 === 0 ? 12 : p.h % 12;
+    return { fecha: ('0' + p.d).slice(-2) + '/' + ('0' + p.mo).slice(-2) + '/' + p.y, hora: h12 + ':' + ('0' + p.mi).slice(-2),
+      am: p.h < 12, pm: p.h >= 12 };
   }
 
-  function fechaCorta(iso) { return fechaPartes(iso).fecha; }
+  /** Solo el día. Un "…T00:00:00.000Z" es un campo de fecha sin hora (medianoche UTC): no se corre al día anterior. */
+  function fechaCorta(iso) {
+    var s = iso == null ? '' : String(iso).trim();
+    return fechaPartes(/T00:00:00(?:\.000)?Z$/.test(s) ? s.slice(0, 10) : s).fecha;
+  }
 
   // ---------------------------------------------------------------- ENCABEZADO
   function encabezado(o, consecutivo) {

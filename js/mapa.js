@@ -56,7 +56,7 @@ async function abrirMapa() {
   MAPA.filtro = FILTROS_MAPA.some((f) => f[0] === guardado) ? guardado : 'todas';   // un valor raro nunca deja el mapa en blanco
   ajustarAltoMapa();
   if (!MAPA.mapa) {
-    MAPA.mapa = L.map('mapa', { zoomControl: true, attributionControl: true }).setView([4.8133, -75.6961], 13);
+    MAPA.mapa = L.map('mapa', { zoomControl: true, attributionControl: true, preferCanvas: true }).setView([4.8133, -75.6961], 13);
     // Sin {s}: el mismo cuadrito se guardaba hasta tres veces con a./b./c.
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19, attribution: '© OpenStreetMap', crossOrigin: true
@@ -103,11 +103,12 @@ function pintarMapa() {
   const visibles = todos.filter((p) => MAPA.filtro === 'todas' ||
     (MAPA.filtro === 'porEvaluar' ? p.tipo === 'porEvaluar' : p.tipo === 'evaluada'));
   MAPA.capa.clearLayers();
+  // Miles de puntos (19/10): la ventanita se arma al tocar el punto (armarlas todas tardaba segundos).
   visibles.forEach((p) => {
     const color = p.tipo === 'porEvaluar' ? COLOR_PUNTO.porEvaluar : COLOR_PUNTO[p.color];
     L.circleMarker([p.lat, p.lon], {
       radius: p.tipo === 'porEvaluar' ? 8 : 7, color: '#fff', weight: 2, fillColor: color, fillOpacity: 0.95
-    }).bindPopup(htmlPopup(p), { maxWidth: 260 }).addTo(MAPA.capa);
+    }).bindPopup(() => htmlPopup(p), { maxWidth: 260 }).addTo(MAPA.capa);
   });
   if (MAPA.reencuadrar && visibles.length) {
     MAPA.mapa.fitBounds(L.latLngBounds(visibles.map((p) => [p.lat, p.lon])), { padding: [30, 30], maxZoom: 16 });

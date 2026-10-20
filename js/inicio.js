@@ -187,6 +187,9 @@ function chipClasif(clasif) {
   return '<span class="clasif c-' + (color || '') + '">' + esc(NOMBRE_COLOR[color] || clasif) + '</span>';
 }
 
+/** Con miles de evaluaciones, dibujarlas todas traba el celular: de a 50 (el buscador sí busca en todas). */
+const ENVIADAS_POR_PAGINA = 50;
+
 function htmlEnviadas() {
   const partes = [];
   const items = enviadasVisibles();
@@ -201,7 +204,9 @@ function htmlEnviadas() {
       '<div class="t-pie"><span></span><button type="button" class="btn-secundario btn-chico" data-ver-cola="' + esc(c.id) + '">' + icono('documento') + 'Ver ficha</button></div>' +
       '</article>');
   });
-  items.filter((x) => x.h).map((x) => x.h).forEach((h) => {
+  const hechas = items.filter((x) => x.h).map((x) => x.h);
+  const mostrar = APP.mostrarEnviadas || ENVIADAS_POR_PAGINA;
+  hechas.slice(0, mostrar).forEach((h) => {
     partes.push('<article class="tarjeta">' +
       '<div class="t-cab"><span class="t-id">' + esc(h.num_formulario || '') + '</span>' + chipClasif(h.clasif) + '</div>' +
       '<h3>' + esc(h.direccion || 'Sin dirección') + '</h3>' +
@@ -211,6 +216,10 @@ function htmlEnviadas() {
         '<a class="btn-secundario btn-chico" data-ficha target="_blank" href="' + esc(h.ficha_url) + '">' + icono('documento') + 'Abrir ficha</a></div>' : '') +
       '</article>');
   });
+  if (hechas.length > mostrar) {
+    partes.push('<button type="button" class="btn-secundario btn-chico" data-mas-enviadas>Ver ' +
+      Math.min(ENVIADAS_POR_PAGINA, hechas.length - mostrar) + ' más (de ' + hechas.length + ')</button>');
+  }
   return partes.length ? partes.join('') : vacioHtml('Aún no hay evaluaciones enviadas', 'Aquí verá las suyas y las del equipo después de sincronizar.');
 }
 
@@ -247,6 +256,9 @@ function enlazarInicio() {
     } else if (t.dataset.verCola) {
       const c = await DB.leer('cola', t.dataset.verCola);
       abrirVistaPreviaCola(c);
+    } else if (t.hasAttribute('data-mas-enviadas')) {
+      APP.mostrarEnviadas = (APP.mostrarEnviadas || ENVIADAS_POR_PAGINA) + ENVIADAS_POR_PAGINA;
+      pintarInicio();
     }
   });
   $('#btn-nueva').addEventListener('click', () => abrirEvaluacion({}));

@@ -4,7 +4,7 @@
    ========================================================================= */
 'use strict';
 
-const VERSION_APP = 'miyamoto-60';     // subirla junto con VERSION en sw.js
+const VERSION_APP = 'miyamoto-61';     // subirla junto con VERSION en sw.js
 
 const APP = {
   perfil: null,          // { codigo, entidad, nombre, tipo_doc, num_doc, id_evaluador, matricula, dependencia }
@@ -37,16 +37,27 @@ const DB = {
   async abrir() {
     if (this._db) return this._db;
     this._db = await new Promise((ok, fallo) => {
-      const req = indexedDB.open(NOMBRE_BD, 1);
+      const req = indexedDB.open(NOMBRE_BD, 2);
       req.onupgradeneeded = (ev) => {
         const db = ev.target.result;
-        db.createObjectStore('kv');
-        db.createObjectStore('borradores', { keyPath: 'id' });
-        db.createObjectStore('cola', { keyPath: 'id' });
-        const f = db.createObjectStore('fotos', { keyPath: 'clave' });
-        f.createIndex('idEval', 'idEval');
+        // v1: lo de siempre (solo en una instalación nueva: rehacerlos borraría la cola y los borradores).
+        if (ev.oldVersion < 1) {
+          db.createObjectStore('kv');
+          db.createObjectStore('borradores', { keyPath: 'id' });
+          db.createObjectStore('cola', { keyPath: 'id' });
+          const f = db.createObjectStore('fotos', { keyPath: 'clave' });
+          f.createIndex('idEval', 'idEval');
+        }
+        // v2 (19/10): las evaluaciones del equipo, una por fila (antes, 800 dentro de kv.catalogo).
+        if (ev.oldVersion < 2) db.createObjectStore('evaluaciones', { keyPath: 'id' });
       };
-      req.onsuccess = () => ok(req.result);
+      // Otra pestaña con la versión vieja abierta frena la actualización de la base: se avisa (19/10).
+      req.onblocked = () => { if (typeof toast === 'function') toast('Cierre las otras pestañas de la app para terminar de actualizarla.', 'error'); };
+      req.onsuccess = () => {
+        // Y esta, si otra pestaña actualiza la base, la suelta y se recarga con la versión nueva.
+        req.result.onversionchange = () => { req.result.close(); location.reload(); };
+        ok(req.result);
+      };
       req.onerror = () => fallo(req.error);
     });
     return this._db;
@@ -66,6 +77,9 @@ const DB = {
   borrar: (almacen, clave) => DB._tx(almacen, 'readwrite', (s) => s.delete(clave)),
   todos: (almacen) => DB._tx(almacen, 'readonly', (s) => s.getAll()),
   fotosDe: (idEval) => DB._tx('fotos', 'readonly', (s) => s.index('idEval').getAll(idEval)),
+  ponerEvaluaciones: (lista) => DB._tx('evaluaciones', 'readwrite', (s) => { lista.forEach((e) => s.put(e)); }),
+  quitarEvaluaciones: (ids) => DB._tx('evaluaciones', 'readwrite', (s) => { ids.forEach((id) => s.delete(id)); }),
+  vaciarEvaluaciones: () => DB._tx('evaluaciones', 'readwrite', (s) => s.clear()),
   guardarKV: (clave, valor) => DB._tx('kv', 'readwrite', (s) => s.put(valor, clave)),
   leerKV: (clave) => DB._tx('kv', 'readonly', (s) => s.get(clave))
 };
@@ -297,8 +311,8 @@ function urlComoLlegar(s) {
  * Un solo buscador para Visitas, Mapa y Tablero. Busca en lo que ya está en
  * el celular (al instante y sin señal): sin importar tildes ni mayúsculas, y
  * con varias palabras todas deben aparecer ("cuba 12" encuentra "Mz 4 Cs 12,
- * Cuba"). Alcanza a las 800 evaluaciones más recientes que baja la
- * sincronización; las más viejas se buscan en la hoja de Google.
+ * Cuba"). Busca en todas las evaluaciones guardadas en el
+ * celular (desde el 19/10 se bajan todas, por cambios).
  */
 function coincideBusqueda() {
   const q = Esquema.normalizarTexto(APP.busqueda);

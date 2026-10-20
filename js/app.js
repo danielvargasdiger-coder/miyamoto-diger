@@ -33,7 +33,7 @@ async function iniciar() {
   APP.perfil = await DB.leerKV('perfil');
   if (!APP.perfil) APP.perfilAnterior = (await DB.leerKV('perfilAnterior')) || (CONFIG.DEMO_CON_DATOS ? perfilDeDemostracion() : null);
   if (!APP.perfil) { mostrarIngreso(); return; }
-  entrarApp();
+  await entrarApp();          // primero lo guardado (con su "desde"): si no, la sincronización pedía todo de nuevo
   sincronizar(true);
 }
 
@@ -41,7 +41,8 @@ async function entrarApp() {
   $$('section.vista').forEach((v) => { v.hidden = true; });
   $('#vista-inicio').hidden = false;
   const cat = await DB.leerKV('catalogo');
-  if (cat) { APP.solicitudes = cat.solicitudes || []; APP.historial = cat.historial || []; APP.ultimaSync = cat.cuando; APP.ultimaSyncMs = cat.ms || null; APP.versionCatalogo = cat.version || ''; }
+  if (cat) { APP.solicitudes = cat.solicitudes || []; APP.ultimaSync = cat.cuando; APP.ultimaSyncMs = cat.ms || null; APP.versionCatalogo = cat.version || ''; APP.desde = cat.desde || ''; }
+  APP.historial = await cargarHistorial(cat);
   await recargarLocales();
   irAVista(APP.vista || 'lista');
 
@@ -58,6 +59,7 @@ function enlazarBuscador() {
     limpiar.hidden = !campo.value;
     MAPA.reencuadrar = true;                   // el mapa se acerca a lo encontrado
     TABLERO.mostrar = 20;
+    APP.mostrarEnviadas = ENVIADAS_POR_PAGINA;
     pintarInicio();
   };
   campo.addEventListener('input', () => { clearTimeout(espera); espera = setTimeout(aplicar, 250); });

@@ -290,13 +290,12 @@ function pintarMapaTablero(lista) {
   $('#mapa-tablero-nota').textContent = conPunto.length === lista.length
     ? conPunto.length + ' evaluaciones en el mapa.'
     : conPunto.length + ' de ' + lista.length + ' evaluaciones tienen ubicación.';
-  const m = L.map(div, { zoomControl: true, scrollWheelZoom: false }).setView([4.8133, -75.6961], 12);
+  const m = L.map(div, { zoomControl: true, scrollWheelZoom: false, preferCanvas: true }).setView([4.8133, -75.6961], 12);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap', crossOrigin: true }).addTo(m);
-  conPunto.forEach((e) => {
-    const color = COLOR_PUNTO[COLOR_CLASIF[e.clasif] || 'sin'];
-    L.circleMarker([+e.lat, +e.lon], { radius: 7, color: '#fff', weight: 2, fillColor: color, fillOpacity: 0.95 })
-      .bindPopup(htmlPopup({ tipo: 'evaluada', h: e }), { maxWidth: 260 }).addTo(m);
-  });
+  // Miles de puntos (19/10): la ventanita se arma al tocar el punto, y todos entran al mapa de una vez.
+  L.layerGroup(conPunto.map((e) => L.circleMarker([+e.lat, +e.lon], { radius: 7, color: '#fff', weight: 2,
+    fillColor: COLOR_PUNTO[COLOR_CLASIF[e.clasif] || 'sin'], fillOpacity: 0.95 })
+    .bindPopup(() => htmlPopup({ tipo: 'evaluada', h: e }), { maxWidth: 260 }))).addTo(m);
   if (conPunto.length) m.fitBounds(L.latLngBounds(conPunto.map((e) => [+e.lat, +e.lon])), { padding: [24, 24], maxZoom: 16 });
   TABLERO.mapa = m;
   // Si en esos 60 ms se tocó otro filtro, este mapa ya se borró: no se toca (daba error en la consola).
@@ -402,12 +401,11 @@ function abrirMapaGrande() {
   });
   if (typeof L === 'undefined') { $('#mapa-grande', caja).innerHTML = '<p class="vacio">No se pudo cargar el mapa.</p>'; return; }
   const conPunto = lista.filter((e) => Esquema.coordenadaValida(e.lat, e.lon));
-  const m = L.map($('#mapa-grande', caja), { zoomControl: true }).setView([4.8133, -75.6961], 12);
+  const m = L.map($('#mapa-grande', caja), { zoomControl: true, preferCanvas: true }).setView([4.8133, -75.6961], 12);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap', crossOrigin: true }).addTo(m);
-  conPunto.forEach((e) => {
-    L.circleMarker([+e.lat, +e.lon], { radius: 8, color: '#fff', weight: 2, fillColor: COLOR_PUNTO[COLOR_CLASIF[e.clasif] || 'sin'], fillOpacity: 0.95 })
-      .bindPopup(htmlPopup({ tipo: 'evaluada', h: e }), { maxWidth: 260 }).addTo(m);
-  });
+  L.layerGroup(conPunto.map((e) => L.circleMarker([+e.lat, +e.lon], { radius: 8, color: '#fff', weight: 2,
+    fillColor: COLOR_PUNTO[COLOR_CLASIF[e.clasif] || 'sin'], fillOpacity: 0.95 })
+    .bindPopup(() => htmlPopup({ tipo: 'evaluada', h: e }), { maxWidth: 260 }))).addTo(m);
   if (conPunto.length) m.fitBounds(L.latLngBounds(conPunto.map((e) => [+e.lat, +e.lon])), { padding: [30, 30], maxZoom: 17 });
   TABLERO.mapaGrande = m;
   setTimeout(() => { if (TABLERO.mapaGrande === m) m.invalidateSize(); }, 60);

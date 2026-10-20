@@ -347,16 +347,48 @@ function explicarFallo(e) {
  * Cloudflare no reconoce (Google es el dueño de los códigos y lo confirma).
  */
 const ESPERA_NUBE = 15000;
-async function catalogoDeLaNube() {
+async function catalogoDeLaNube(aMitad) {
   try {
     if (CONFIG.DEMO || !CONFIG.URL_NUBE) return null;
+    // desde (19/10): solo lo que cambió desde la última vez. A mitad de una carga, sin versión (si no, diría "sin cambios").
     return await pedirCloudflare(CONFIG.URL_NUBE + '/catalogo', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.assign({ codigo: APP.perfil ? APP.perfil.codigo : '', version: APP.versionCatalogo || '' }, quienSoy()))
+      body: JSON.stringify(Object.assign({ codigo: APP.perfil ? APP.perfil.codigo : '', version: aMitad ? '' : (APP.versionCatalogo || ''),
+        desde: APP.desde || '' }, quienSoy()))
     }, ESPERA_NUBE);
   } catch (e) {
     return null;
   }
+}
+
+/** Primera carga o mucho atraso: varias tandas seguidas (con tope: lo que falte sigue en la próxima sincronización). */
+const VUELTAS_CATALOGO = 20;
+async function catalogoCompletoDeLaNube(t0) {
+  let n = await catalogoDeLaNube();
+  if (!n || n.sinCambios) return n;
+  await aplicarCatalogo(n, Date.now() - t0);
+  for (let vuelta = 0; n.mas && vuelta < VUELTAS_CATALOGO; vuelta++) {
+    const sig = await catalogoDeLaNube(true);
+    if (!sig || sig.sinCambios) break;
+    await aplicarCatalogo(sig, Date.now() - t0);
+    n = sig;
+  }
+  return n;
+}
+
+/** Las del equipo, más recientes primero (así las muestra Enviadas). */
+function ordenarHistorial(lista) {
+  return lista.sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+}
+
+/** Al abrir la app. La primera vez con esta versión, lo que había en kv.catalogo pasa al almacén (sin señal se sigue viendo). */
+async function cargarHistorial(cat) {
+  let lista = (await DB.todos('evaluaciones')) || [];
+  if (!lista.length && cat && cat.historial && cat.historial.length) {
+    await DB.ponerEvaluaciones(cat.historial);
+    lista = cat.historial.slice();
+  }
+  return ordenarHistorial(lista);
 }
 
 /**
@@ -379,18 +411,30 @@ async function marcarSinCambios(ms) {
   await DB.guardarKV('catalogo', Object.assign(cat, { cuando: APP.ultimaSync, ms: APP.ultimaSyncMs }));
 }
 
-/** Deja el catálogo en la app y en el celular. ms: lo que tardó, para verlo en el estado. */
+/**
+ * Deja el catálogo en la app y en el celular. ms: lo que tardó, para verlo en el estado. De Cloudflare llegan solo
+ * los cambios (con `hasta`); de Google, sus 800 más recientes (sin `hasta`): en los dos casos se SUMAN a lo guardado.
+ * El almacén se escribe ANTES de mover `desde`: si el celular no tiene espacio, falla aquí y la próxima vez se pide lo mismo.
+ */
 async function aplicarCatalogo(r, ms) {
+  const nuevas = r.evaluaciones || [], bajas = r.bajas || [];
+  if (r.reiniciar) await DB.vaciarEvaluaciones();
+  if (nuevas.length) await DB.ponerEvaluaciones(nuevas);
+  if (bajas.length) await DB.quitarEvaluaciones(bajas);
+  const porId = new Map((r.reiniciar ? [] : APP.historial).map((h) => [h.id, h]));
+  nuevas.forEach((h) => porId.set(h.id, h));
+  bajas.forEach((id) => porId.delete(id));
+  APP.historial = ordenarHistorial(Array.from(porId.values()));
   APP.solicitudes = r.solicitudes || [];
-  APP.historial = r.evaluaciones || [];
-  APP.versionCatalogo = r.version || '';          // el de Google no trae versión: la próxima, Cloudflare manda todo
+  if (r.hasta !== undefined) APP.desde = String(r.hasta);
+  APP.versionCatalogo = r.mas ? '' : (r.version || '');   // el de Google no trae versión: la próxima, Cloudflare manda todo
   await guardarListas(r.listas);
   APP.ultimaSync = new Date().toISOString();
   APP.ultimaSyncMs = ms || null;
   APP.primeraSyncFallo = false;
   _reintentosPrimera = 0;
-  await DB.guardarKV('catalogo', { solicitudes: APP.solicitudes, historial: APP.historial, cuando: APP.ultimaSync, ms: APP.ultimaSyncMs,
-    version: APP.versionCatalogo });
+  await DB.guardarKV('catalogo', { solicitudes: APP.solicitudes, cuando: APP.ultimaSync, ms: APP.ultimaSyncMs,
+    version: APP.versionCatalogo, desde: APP.desde || '' });
   // Lo que el servidor ya devuelve deja de hacer falta en el historial local.
   const ids = new Set(APP.historial.map((h) => h.id));
   const locales = ((await DB.leerKV('enviadasLocal')) || []).filter((e) => !ids.has(e.id));
@@ -445,10 +489,9 @@ async function sincronizar(silencioso) {
   }, () => {});
   try {
     const t0 = Date.now();
-    const n = await catalogoDeLaNube();
+    const n = await catalogoCompletoDeLaNube(t0);
     if (n && n.sinCambios) await marcarSinCambios(Date.now() - t0);
-    else if (n) await aplicarCatalogo(n, Date.now() - t0);
-    else await aplicarCatalogo(await api('catalogo', quienSoy(), ESPERA_CATALOGO), Date.now() - t0);
+    else if (!n) await aplicarCatalogo(await api('catalogo', quienSoy(), ESPERA_CATALOGO), Date.now() - t0);
     if (!silencioso) toast('Sincronizado', 'ok');
   } catch (e) {
     if (!APP.ultimaSync) { APP.primeraSyncFallo = true; reintentarPrimera(); }

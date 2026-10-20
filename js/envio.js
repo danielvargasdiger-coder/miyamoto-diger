@@ -353,7 +353,8 @@ async function catalogoDeLaNube(aMitad) {
     // desde (19/10): solo lo que cambió desde la última vez. A mitad de una carga, sin versión (si no, diría "sin cambios").
     return await pedirCloudflare(CONFIG.URL_NUBE + '/catalogo', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.assign({ codigo: APP.perfil ? APP.perfil.codigo : '', version: aMitad ? '' : (APP.versionCatalogo || ''),
+      // Sin "desde" todavía (primera carga), sin versión: la de la app anterior haría responder "sin cambios".
+      body: JSON.stringify(Object.assign({ codigo: APP.perfil ? APP.perfil.codigo : '', version: aMitad || !APP.desde ? '' : (APP.versionCatalogo || ''),
         desde: APP.desde || '' }, quienSoy()))
     }, ESPERA_NUBE);
   } catch (e) {

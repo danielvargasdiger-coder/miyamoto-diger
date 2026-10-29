@@ -107,7 +107,47 @@ function vacioHtml(titulo, texto) {
   return '<div class="vacio">' + icono('edificio') + '<b>' + esc(titulo) + '</b><p>' + esc(texto) + '</p></div>';
 }
 
-function htmlPorEvaluar(pend) {
+/* Las solicitudes viejas se quedaban sin resolver (29/10): cada una dice cuánto lleva y, con más de 15 días,
+   sube un nivel de prioridad (solo el orden del celular; la hoja no cambia). */
+const DIAS_SUBE_PRIORIDAD = 15;
+const DIAS_AVISO = 7;
+const ORDEN_PRIORIDAD = { 'ALTA': 0, 'MEDIA': 1, 'BAJA': 2 };
+
+/** Días desde que entró la solicitud; null si no tiene fecha (las de antes del 29/10). */
+function diasDeSolicitud(s, hoy) {
+  const f = Date.parse(s.fecha || '');
+  return isNaN(f) ? null : Math.max(0, Math.floor(((hoy || Date.now()) - f) / 86400000));
+}
+
+/** "SOL-2026-0101" → número para ordenar por antigüedad cuando no hay fecha (menor = más vieja). */
+function numeroDeSolicitud(s) {
+  const m = /SOL-(\d{4})-(\d+)/.exec(String(s.id_solicitud || ''));
+  return m ? Number(m[1]) * 1e6 + Number(m[2]) : Infinity;
+}
+
+/**
+ * Orden de "Por evaluar": las asignadas a usted; luego la prioridad (subiendo un nivel las de más de 15 días);
+ * dentro de cada una, la más vieja primero. Las que no tienen fecha (de antes) van primero en su prioridad, por número.
+ */
+function ordenarPorEvaluar(lista, hoy) {
+  const nivel = (s) => {
+    const p = ORDEN_PRIORIDAD[s.prioridad] ?? 3, d = diasDeSolicitud(s, hoy);
+    return d !== null && d > DIAS_SUBE_PRIORIDAD ? Math.max(0, p - 1) : p;
+  };
+  const momento = (s) => { const f = Date.parse(s.fecha || ''); return isNaN(f) ? -Infinity : f; };
+  return lista.slice().sort((a, b) => (b.para_mi ? 1 : 0) - (a.para_mi ? 1 : 0) || nivel(a) - nivel(b) ||
+    momento(a) - momento(b) || numeroDeSolicitud(a) - numeroDeSolicitud(b));
+}
+
+function htmlAntiguedad(dias) {
+  if (dias === null) return '';
+  const clase = dias > DIAS_SUBE_PRIORIDAD ? ' a-roja' : dias > DIAS_AVISO ? ' a-ambar' : '';
+  const texto = dias === 0 ? 'Hoy' : 'Hace ' + dias + (dias === 1 ? ' día' : ' días');
+  return '<span class="antiguedad' + clase + '" title="Días desde que entró la solicitud">' + texto + '</span>';
+}
+
+function htmlPorEvaluar(pend, hoy) {
+  hoy = hoy || Date.now();
   if (!pend.length && APP.busqueda) return vacioBusqueda();
   if (!pend.length) {
     // (02/10) Mientras baja el catálogo por primera vez NO es que no haya visitas; si la
@@ -121,13 +161,14 @@ function htmlPorEvaluar(pend) {
     return vacioHtml('No tiene visitas asignadas',
       'Aquí aparecen las visitas que la DIGER le asigne. Para evaluar una edificación que no está en la lista, toque el botón +.');
   }
-  const orden = { 'ALTA': 0, 'MEDIA': 1, 'BAJA': 2 };
-  pend = pend.slice().sort((a, b) => (b.para_mi ? 1 : 0) - (a.para_mi ? 1 : 0) || (orden[a.prioridad] ?? 3) - (orden[b.prioridad] ?? 3));
+  pend = ordenarPorEvaluar(pend, hoy);
   return pend.map((s) => {
     const b = borradorDeSolicitud(s.id_solicitud);
     return '<article class="tarjeta">' +
       '<div class="t-cab"><span class="t-etiquetas"><span class="prioridad p-' + esc((s.prioridad || '').toLowerCase()) + '">' + esc(s.prioridad || 'Sin prioridad') + '</span>' +
-      (s.para_mi ? '<span class="asignada">' + icono('check') + 'Asignada a usted</span>' : '') + '</span>' +
+      htmlAntiguedad(diasDeSolicitud(s, hoy)) +
+      // Lo normal es que esté asignada a quien la ve: se marca solo la excepción, la que ven todos (29/10).
+      (!String(s.asignado || '').trim() ? '<span class="sin-asignar" title="Sin asignar: la ve todo el equipo">Sin asignar</span>' : '') + '</span>' +
       '<span class="t-id">' + esc(s.id_solicitud) + '</span></div>' +
       '<h3>' + esc(s.direccion || 'Sin dirección') + '</h3>' +
       '<p class="t-lugar">' + esc([s.barrio, s.municipio].filter(Boolean).join(' · ')) + '</p>' +

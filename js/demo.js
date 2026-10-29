@@ -226,7 +226,8 @@ var Demo = (function () {
       return {
         id_solicitud: 'SOL-' + anio + '-' + pad(101 + i), prioridad: s[0], asignado: s[1] === '@yo' ? (yo || PERFIL.nombre) : s[1],
         direccion: s[2], barrio: s[3], municipio: 'Pereira', contacto: s[4], telefono: s[5], descripcion: s[6],
-        lat: +(b[1] + (r() - 0.5) * 0.004).toFixed(6), lon: +(b[2] + (r() - 0.5) * 0.004).toFixed(6)
+        lat: +(b[1] + (r() - 0.5) * 0.004).toFixed(6), lon: +(b[2] + (r() - 0.5) * 0.004).toFixed(6),
+        fecha: new Date(Date.now() - [1, 4, 9, 20, 0, 12, 30, 2][i % 8] * 86400000).toISOString()   // para ver "Hace N días"
       };
     }).filter(function (s, i) { return !SOLICITUDES[i][1] || SOLICITUDES[i][1] === '@yo'; })
       .map(function (s, i) { s.para_mi = !!s.asignado; return s; });

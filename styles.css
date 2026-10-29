@@ -139,7 +139,7 @@ body.modo-demo, body.entorno-pruebas { --alto-cinta: 22px; padding-top: var(--al
 .tarjeta { background: #fff; border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px 14px; box-shadow: var(--sombra); min-width: 0; }
 .tarjeta h3 { font-size: 1.04rem; margin: 6px 0 2px; overflow-wrap: anywhere; }
 .t-cab { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.t-id { font-size: .8rem; color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+.t-id { font-size: .8rem; color: var(--texto-suave); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .t-lugar { margin: 0; color: var(--texto-suave); font-size: .9rem; }
 .t-desc { margin: 6px 0 0; font-size: .9rem; }
 .t-pie { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
@@ -181,6 +181,11 @@ body.modo-demo, body.entorno-pruebas { --alto-cinta: 22px; padding-top: var(--al
 .version-app { text-align: center; font-size: .68rem; color: #9aa8b4; margin: 2px 0 0; }
 .cinta-entorno a { color: #fff; text-decoration: underline; }
 .p-alta { background: #fde2e2; color: #a1000b; } .p-media { background: #fff1d6; color: #8a4b00; } .p-baja { background: #e3f2e5; color: #1b5e20; }
+/* Cuánto lleva la solicitud (29/10): gris; ámbar con más de 7 días; roja con más de 15 (ya subió de prioridad). */
+.antiguedad { font-size: .74rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #eceff1; color: var(--texto-suave); white-space: nowrap; }
+.antiguedad.a-ambar { background: #fff1d6; color: #7a4200; }
+.antiguedad.a-roja { background: #fde2e2; color: #a1000b; }
+.sin-asignar { font-size: .74rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #e7f1f6; color: var(--azul-oscuro); white-space: nowrap; }
 .etiqueta-borrador, .etiqueta-cola { display: inline-flex; align-items: center; gap: 4px; font-size: .78rem; font-weight: 700; color: #8a4b00; }
 .etiqueta-cola { color: var(--azul); }
 .etiqueta-borrador .ico, .etiqueta-cola .ico { width: 16px; height: 16px; }

@@ -30,7 +30,8 @@ function comprimirImagen(archivo, anchoMax, calidad) {
 /** Nombre de archivo estable: es lo que usa el servidor para no duplicar. */
 function nombreFoto(campo, n, ext) { return campo.replace(/^foto_/, '') + '_' + n + '.' + (ext || 'jpg'); }
 
-async function agregarFotos(idEval, campo, archivos, max) {
+/** ancho y calidad: opcionales (los certificados las guardan más reducidas); sin ellos, las de CONFIG. */
+async function agregarFotos(idEval, campo, archivos, max, ancho, calidad) {
   const actuales = (APP.actual.datos[campo] || []).slice();
   const libres = max - actuales.length;
   const lista = Array.from(archivos).slice(0, Math.max(0, libres));
@@ -38,7 +39,7 @@ async function agregarFotos(idEval, campo, archivos, max) {
   let n = actuales.reduce((m, c) => Math.max(m, +c.split('|')[2] || 0), 0);
   for (const archivo of lista) {
     n++;
-    const dataUrl = await comprimirImagen(archivo, CONFIG.ANCHO_MAX_FOTO, CONFIG.CALIDAD_FOTO);
+    const dataUrl = await comprimirImagen(archivo, ancho || CONFIG.ANCHO_MAX_FOTO, calidad || CONFIG.CALIDAD_FOTO);
     const clave = idEval + '|' + campo + '|' + n;
     await DB.guardar('fotos', { clave, idEval, campo, nombre: nombreFoto(campo, n), dataUrl, tipo: 'image/jpeg' });
     actuales.push(clave);

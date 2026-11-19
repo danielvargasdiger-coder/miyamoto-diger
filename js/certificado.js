@@ -69,7 +69,6 @@ var Certificado = (function () {
     if (!etiqueta(AREAS, d.areas)) falta('areas', 'Falta indicar las áreas inspeccionadas.');
     if (!d.obs_sin_dano && !d.obs_indicios && !d.obs_zonas_sin_evaluar) falta('observaciones', 'Marque al menos una observación técnica.');
     else if (d.obs_sin_dano && d.obs_indicios) falta('obs_indicios', '"No se observan signos de daño" y "Se observan indicios" se contradicen: deje solo una.');
-    if (vacio(d.reparaciones)) falta('reparaciones', 'Describa las reparaciones locativas visibles.');
     if (!etiqueta(CONCEPTOS, d.concepto)) falta('concepto', 'Falta el concepto profesional.');
     else if (conceptosPermitidos(d).indexOf(d.concepto) === -1 && !(d.obs_sin_dano && d.obs_indicios)) {
       falta('concepto', 'Con indicios o zonas sin evaluar, el concepto solo puede ser Condicionado o Desfavorable.');
@@ -113,7 +112,8 @@ var Certificado = (function () {
 
   /* Formato de los documentos de la Alcaldía de Pereira (p. ej. el informe de supervisión, 19/11/2026): logo arriba a la
      izquierda, título en mayúsculas a la derecha, Arial en negro, tablas de borde negro delgado con rótulos en negrilla,
-     firma sobre una línea con el nombre en mayúsculas y la dirección de la Alcaldía centrada al pie. Sin colores. */
+     firma sobre una línea con el nombre en mayúsculas y la dirección de la Alcaldía centrada al pie. El único color es el
+     del concepto escogido (pedido del usuario tras la prueba real, 19/11/2026). */
   var CSS = '*{box-sizing:border-box}body{margin:0;background:#eef1f4;color:#000;font-family:Arial,Helvetica,sans-serif}' +
     '.hoja{position:relative;max-width:816px;margin:12px auto;background:#fff;padding:36px 56px 24px;box-shadow:0 1px 4px rgba(0,0,0,.12);font-size:10pt;line-height:1.3}' +
     // Membrete: logos a la izquierda, título a la derecha y la línea roja de borde a borde de la hoja (como la Alcaldía).
@@ -123,19 +123,23 @@ var Certificado = (function () {
     'h2{font-size:10pt;margin:12px 0 4px;text-transform:uppercase}' +
     'table.datos{width:100%;border-collapse:collapse}table.datos th,table.datos td{border:1px solid #000;padding:2px 5px;text-align:left;vertical-align:top}' +
     'table.datos th{width:34%;font-weight:700}.casilla{margin:2px 0}.gris{color:#555}' +
-    '.concepto{border:1px solid #000;padding:4px 6px;margin:3px 0}' +
+    '.concepto{border:1.5px solid #000;border-left-width:6px;padding:5px 8px;margin:3px 0;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    '.concepto.c-favorable{background:#e3f4e6;border-color:#2e7d32}.concepto.c-condicionado{background:#fff3d6;border-color:#c48a00}' +
+    '.concepto.c-desfavorable{background:#fde4e4;border-color:#c62828}' +
     '.texto{text-align:justify;margin:0 0 4px}.firma{margin:22px 0 4px;min-height:40px}.firma img{max-height:64px;display:block}' +
     '.linea{width:240px;max-width:100%;border-top:1px solid #000;margin-top:2px;padding-top:2px}.linea b{text-transform:uppercase}' +
-    '.legal{font-size:7pt;line-height:1.25;text-align:justify;color:#222;margin-top:12px}' +
-    '.pie{display:flex;gap:14px;align-items:center;margin-top:12px;font-size:8.5pt}.pie .qr{width:26mm;height:26mm;flex:none}' +
-    '.sello{margin-top:4px}.dir{text-align:center;font-size:9pt;margin-top:14px;line-height:1.35}' +
+    '.legal{font-size:5.5pt;line-height:1.2;text-align:justify;color:#333;margin-top:10px}' +
+    // QR discreto (pedido del usuario, 19/11): lo central es el certificado. 18 mm impreso sigue leyéndose (~0,4 mm por cuadrito).
+    '.pie{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:6.5pt;color:#555;line-height:1.3}.pie .qr{width:18mm;height:18mm;flex:none}' +
+    '.sello{margin-top:2px}.dir{text-align:center;font-size:9pt;margin-top:14px;line-height:1.35}' +
     '.franja{max-width:816px;margin:12px auto 0;padding:9px 14px;border-radius:8px;font-weight:600;color:#fff;font-family:system-ui,sans-serif}' +
-    '.f-ok{background:#2e7d32}.f-anulado{background:#c62828}.fotos{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fotos img{width:100%;height:auto;border:1px solid #000}' +
+    '.f-ok{background:#2e7d32}.f-anulado{background:#c62828}.fotos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}' +
+    '.fotos img{width:100%;aspect-ratio:4/3;object-fit:cover;border:1px solid #000;display:block}' +
     '.marca-anulado,.marca-previa{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;' +
     'font-size:64pt;font-weight:800;transform:rotate(-24deg);opacity:.14}.marca-anulado{color:#c62828}.marca-previa{color:#333;font-size:46pt}' +
     '@media (max-width:600px){.hoja{padding:18px 14px}.cab{flex-direction:column;align-items:flex-start;gap:8px;margin:0 -14px 8px;padding:0 14px 8px}' +
     '.cab img{height:44px;max-width:100%}.cab h1{text-align:left;max-width:none}' +
-    '.texto,.legal{text-align:left}}' +
+    '.texto,.legal{text-align:left}.fotos{grid-template-columns:1fr 1fr}}' +
     // Al guardar en PDF: sin margen a los lados de la hoja, para que la línea roja llegue de borde a borde; el margen lo da .hoja.
     '@page{size:letter;margin:12mm 0}' +
     '@media print{body{background:#fff}.franja,.barra-ficha{display:none}.hoja{box-shadow:none;margin:0;max-width:none;padding:0 18mm}' +
@@ -160,8 +164,8 @@ var Certificado = (function () {
         ? '<div class="concepto c-' + c[0] + '">☒ <b>' + esc(c[1]) + ':</b> ' + esc(c[2]) + '</div>'
         : casilla(false, c[1] + ': ' + c[2]);
     }).join('');
-    var pie = o.vistaPrevia ? '' : '<div class="pie">' + qrSvg(o.enlace || '') + '<div>Verifique la autenticidad de este certificado escaneando el código o en<br><b>' +
-      esc(o.enlace || '') + '</b><div class="sello">Datos tomados el <b>' + esc(o.consultado || '') + '</b> (hora de Colombia).</div></div></div>';
+    var pie = o.vistaPrevia ? '' : '<div class="pie">' + qrSvg(o.enlace || '') + '<div>Verifique este certificado con el código o en ' +
+      esc(o.enlace || '') + '<div class="sello">Datos tomados el <b>' + esc(o.consultado || '') + '</b> (hora de Colombia).</div></div></div>';
     var fotos = (o.fotos || []).length ? '<section class="hoja salto">' + cab + '<h2>Anexo técnico – registro fotográfico</h2><div class="fotos">' +
       o.fotos.map(function (u) { return '<img src="' + esc(u) + '" alt="Foto del inmueble">'; }).join('') + '</div>' + dir + '</section>' : '';
     var cuerpo = '<section class="hoja">' +
@@ -173,7 +177,7 @@ var Certificado = (function () {
       '<h2>Descripción de la visita</h2><p class="texto">' + esc(TEXTOS.descripcion) + '</p>' +
       '<h2>Observaciones técnicas de la visita</h2><div>Áreas inspeccionadas: <b>' + esc(etiqueta(AREAS, d.areas)) + '</b></div>' +
       OBSERVACIONES.map(function (x) { return casilla(!!d[x[0]], x[1]); }).join('') +
-      '<div><b>Descripción de reparaciones locativas visibles:</b> ' + esc(d.reparaciones) + '</div>' +
+      '<div><b>Descripción de reparaciones locativas visibles:</b> ' + (vacio(d.reparaciones) ? 'No se registraron.' : esc(d.reparaciones)) + '</div>' +
       '<h2>Concepto profesional</h2>' + conceptos +
       '<h2>Constancia para trámite de conexión o reconexión</h2><p class="texto">' + esc(TEXTOS.constancia) + '</p>' +
       '<h2>Alcance y limitaciones del concepto técnico</h2><p class="texto">' + esc(TEXTOS.alcance) + '</p>' +

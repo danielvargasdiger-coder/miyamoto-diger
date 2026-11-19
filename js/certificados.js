@@ -215,7 +215,7 @@ function pintarFormCert() {
       '<div class="cert-obs">' + Certificado.OBSERVACIONES.map((o) => '<button type="button" role="checkbox" class="chip" data-cert-obs="' + o[0] +
         '" aria-checked="' + !!d[o[0]] + '">' + esc(o[1]) + '</button>').join('') + '</div>' + errorCert('obs_indicios'), true) +
     campoCert('reparaciones', 'Descripción de reparaciones locativas visibles',
-      '<textarea rows="3" maxlength="2000" data-cert="reparaciones">' + esc(d.reparaciones) + '</textarea>', true) +
+      '<textarea rows="3" maxlength="2000" data-cert="reparaciones" placeholder="Opcional. Si no hay, el certificado dice: No se registraron.">' + esc(d.reparaciones) + '</textarea>') +
     '<div id="cert-concepto-caja">' + htmlConceptoCert() + '</div>' +
     campoCert('fotos', 'Registro fotográfico <span class="c-nota" id="cert-fotos-n"></span>', '<div class="fotos" id="cert-fotos"></div>' +
       '<div class="fotos-botones">' +
@@ -277,12 +277,15 @@ function tomarUbicacionCert() {
   }, true);
 }
 
+/** Fotos del certificado más livianas que las de Miyamoto (~60-90 KB cada una): solo son de apoyo, y R2 y la hoja tienen tope. */
+var FOTO_CERT = { ancho: 900, calidad: 0.5 };
+
 /** agregarFotos (fotos.js) lee APP.actual.datos[campo]: se le presta el certificado y se devuelve lo que había. */
 async function subirFotosCert(archivos) {
   const reg = APP.cert.reg;
   const antes = APP.actual;
   APP.actual = { datos: { fotos: reg.fotos } };
-  try { reg.fotos = await agregarFotos(reg.id, 'fotos', archivos, Certificado.MAX_FOTOS); }
+  try { reg.fotos = await agregarFotos(reg.id, 'fotos', archivos, Certificado.MAX_FOTOS, FOTO_CERT.ancho, FOTO_CERT.calidad); }
   catch (e) { toast('No se pudo agregar la foto.', 'error'); }
   finally { APP.actual = antes; }
   limpiarErrorCert('fotos');

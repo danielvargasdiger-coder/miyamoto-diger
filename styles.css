@@ -770,3 +770,8 @@ button.cifra:hover { box-shadow: var(--sombra); }
 #cert-ver-marco { width: 100%; }
 .cert-buscar { width: 100%; min-height: 44px; }
 .chip-concepto.c-anulado { background: #eee; color: #555; text-decoration: line-through; }
+.cert-bandeja-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.cert-bandeja-cab .cert-grupo { margin: 0; }
+.cert-bandeja-cab .btn-chico { flex: none; }
+#cert-bandeja-cuando { margin: -8px 0 -4px; }
+#cert-bandeja { display: grid; gap: 14px; }

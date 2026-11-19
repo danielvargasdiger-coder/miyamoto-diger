@@ -55,20 +55,34 @@ async function abrirCertificados() {
   if (await cargarEquipoCert()) pintarCertificados();
 }
 
-// ---------------------------------------------------------------- DEL EQUIPO (19/11/2026)
-/* Los certificados de todos (Cloudflare /cert/lista, con el código de acceso). Se guardan en el celular (kv certEquipo)
-   para verlos sin señal; cada uno se abre por su enlace, que es la página oficial. */
-const MAX_EQUIPO_VISIBLES = 50;
-const sinTildes = (t) => String(t == null ? '' : t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+// ---------------------------------------------------------------- BANDEJA DE EMITIDOS (19/11/2026)
+/* UNA bandeja con todos los certificados emitidos, de cualquier ingeniero (pedido del usuario): llegan de Cloudflare
+   (/cert/lista, con el código de acceso) y se guardan en el celular (kv certEquipo) para verlos sin señal. Los emitidos
+   desde este celular que aún no aparecen allá se suman. Borradores y "por enviar" van aparte: no han salido del celular. */
+const MAX_BANDEJA_VISIBLES = 50;
+const sinTildes = (t) => String(t == null ? '' : t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-/** Lista del equipo sin los propios (ya salen arriba), filtrada por código, dirección, barrio, comuna o profesional. */
-function filtrarEquipoCert(lista, texto, propios) {
-  const q = sinTildes(texto).trim();
-  return (lista || []).filter((c) => propios.indexOf(c.codigo) === -1 &&
-    (!q || sinTildes([c.codigo, c.direccion, c.barrio_vereda, c.comuna, c.prof_nombre].join(' ')).indexOf(q) !== -1));
+/** Servidor + emitidos locales que aún no llegan; si está en los dos, manda el servidor (la hoja). Más reciente primero. */
+function unirCertificados(servidor, locales) {
+  const lista = (servidor || []).slice();
+  const porCodigo = {};
+  lista.forEach((c, i) => { porCodigo[c.codigo] = i; });
+  (locales || []).filter((r) => r.estado === 'emitido' && r.codigo).forEach((r) => {
+    const d = r.datos || {};
+    if (r.codigo in porCodigo) { lista[porCodigo[r.codigo]] = Object.assign({ id: r.id }, lista[porCodigo[r.codigo]]); return; }
+    lista.push({ id: r.id, codigo: r.codigo, url: r.url || '', estado: 'EMITIDO', fecha_hora_visita: d.fecha_hora_visita || '',
+      direccion: d.direccion || '', barrio_vereda: d.barrio_vereda || '', comuna: d.comuna || '', concepto: d.concepto || '', prof_nombre: d.prof_nombre || '' });
+  });
+  return lista.sort((a, b) => String(b.fecha_hora_visita).localeCompare(String(a.fecha_hora_visita)));
 }
 
-/** true si trajo una lista nueva. Sin señal o sin Cloudflare, se queda con la guardada. */
+/** Búsqueda por código, dirección, barrio, comuna o profesional, sin tildes ni mayúsculas. */
+function filtrarCert(lista, texto) {
+  const q = sinTildes(texto).trim();
+  return (lista || []).filter((c) => !q || sinTildes([c.codigo, c.direccion, c.barrio_vereda, c.comuna, c.prof_nombre].join(' ')).indexOf(q) !== -1);
+}
+
+/** true si trajo la lista del servidor. Sin señal o sin Cloudflare, se queda con la guardada. */
 async function cargarEquipoCert() {
   try {
     let lista;
@@ -82,27 +96,39 @@ async function cargarEquipoCert() {
   } catch (e) { return false; }
 }
 
-function htmlEquipoCert(c) {
+function htmlBandejaCert(c) {
   const anulado = c.estado === 'ANULADO';
+  const ver = c.url && !CONFIG.DEMO ? 'data-cert-url="' + esc(c.url) + '"' : c.id ? 'data-cert-ver="' + esc(c.id) + '"' : 'data-cert-url=""';
   return '<article class="tarjeta cert-item"><span class="cert-codigo">' + esc(c.codigo) + (anulado ? ' · ANULADO' : '') + '</span>' +
     '<div class="cert-item-cab"><b>' + esc(c.direccion || 'Sin dirección') + '</b>' +
     (c.concepto ? '<span class="chip-concepto c-' + esc(anulado ? 'anulado' : c.concepto) + '">' + esc(ROTULO_CONCEPTO[c.concepto] || c.concepto) + '</span>' : '') + '</div>' +
     '<span class="c-nota">' + esc([c.barrio_vereda, fechaBonita(c.fecha_hora_visita), c.prof_nombre].filter(Boolean).join(' · ')) + '</span>' +
-    '<div class="cert-item-pie"><button type="button" class="btn-secundario btn-chico" data-cert-url="' + esc(c.url || '') + '">Ver certificado</button></div></article>';
+    '<div class="cert-item-pie"><button type="button" class="btn-principal btn-chico" ' + ver + '>Ver certificado</button>' +
+    (c.url ? '<button type="button" class="btn-secundario btn-chico" data-cert-copiar="' + esc(c.url) + '">Copiar enlace</button>' +
+      '<a class="btn-secundario btn-chico" target="_blank" rel="noopener" href="https://wa.me/?text=' +
+      encodeURIComponent('Certificado de servicios públicos ' + c.codigo + ': ' + c.url) + '">WhatsApp</a>' : '') + '</div></article>';
 }
 
-async function pintarEquipoCert() {
-  const caja = $('#cert-equipo-items');
+async function pintarBandejaCert() {
+  const caja = $('#cert-bandeja');
   if (!caja) return;
   const guardado = (await DB.leerKV('certEquipo')) || { lista: [] };
-  const propios = (await DB.todos('certificados')).map((r) => r.codigo).filter(Boolean);
-  const todos = filtrarEquipoCert(guardado.lista, '', propios);
-  const hallados = filtrarEquipoCert(guardado.lista, ($('#cert-buscar') || {}).value || '', propios);
-  $('#cert-equipo-cuenta').textContent = todos.length;
-  caja.innerHTML = (hallados.length ? hallados.slice(0, MAX_EQUIPO_VISIBLES).map(htmlEquipoCert).join('') +
-    (hallados.length > MAX_EQUIPO_VISIBLES ? '<p class="c-nota">Se muestran ' + MAX_EQUIPO_VISIBLES + ' de ' + hallados.length + '. Escriba para buscar.</p>' : '')
-    : '<p class="c-nota">' + (todos.length ? 'Ninguno coincide con la búsqueda.' : 'Aún no hay certificados de otros ingenieros' +
-      (guardado.cuando ? '.' : ' (se cargan con señal).')) + '</p>');
+  const todos = unirCertificados(guardado.lista, await DB.todos('certificados'));
+  const hallados = filtrarCert(todos, ($('#cert-buscar') || {}).value || '');
+  $('#cert-bandeja-cuenta').textContent = todos.length;
+  $('#cert-bandeja-cuando').textContent = guardado.cuando ? 'Actualizada: ' + fechaBonita(guardado.cuando) : 'Sin actualizar todavía (necesita señal).';
+  caja.innerHTML = hallados.length ? hallados.slice(0, MAX_BANDEJA_VISIBLES).map(htmlBandejaCert).join('') +
+    (hallados.length > MAX_BANDEJA_VISIBLES ? '<p class="c-nota">Se muestran ' + MAX_BANDEJA_VISIBLES + ' de ' + hallados.length + '. Escriba para buscar.</p>' : '')
+    : '<p class="c-nota">' + (todos.length ? 'Ninguno coincide con la búsqueda.' : 'Aún no hay certificados emitidos.') + '</p>';
+}
+
+/** Botón "Actualizar": envía lo que esté en cola y trae la bandeja de nuevo. */
+async function actualizarCertificados(boton) {
+  if (boton) { boton.disabled = true; boton.textContent = 'Actualizando…'; }
+  await enviarColaCert(true);
+  const ok = await cargarEquipoCert();
+  await pintarCertificados();
+  toast(ok ? 'Bandeja actualizada' : 'Sin señal: se muestra lo último guardado.', ok ? 'ok' : 'error');
 }
 
 function cerrarCertificados() {
@@ -163,13 +189,14 @@ async function pintarCertificados() {
   const de = (estado) => todos.filter((r) => r.estado === estado);
   $('#cert-lista').innerHTML =
     (falta ? '<div class="cert-aviso"><span>' + esc(falta) + '</span><button type="button" class="btn-secundario btn-chico" data-cert-mis-datos>Ir a Mis datos</button></div>' : '') +
-    (todos.length ? grupo('Borradores', de('borrador')) + grupo('Por enviar', de('cola')) + grupo('Emitidos', de('emitido'))
-      : vacioHtml('Aún no ha emitido certificados.', 'Toque "Nuevo certificado" para llenar el concepto técnico en la visita.')) +
-    '<h3 class="cert-grupo">Del equipo <span class="cuenta" id="cert-equipo-cuenta">0</span></h3>' +
+    grupo('Borradores en este celular', de('borrador')) + grupo('Por enviar', de('cola')) +
+    '<div class="cert-bandeja-cab"><h3 class="cert-grupo">Certificados emitidos <span class="cuenta" id="cert-bandeja-cuenta">0</span></h3>' +
+    '<button type="button" class="btn-secundario btn-chico" data-cert-actualizar>' + icono('sincronizar') + 'Actualizar</button></div>' +
+    '<p class="c-nota" id="cert-bandeja-cuando"></p>' +
     '<input type="search" id="cert-buscar" class="cert-buscar" placeholder="Buscar por código, dirección, barrio o ingeniero" autocomplete="off" value="' +
     esc(pintarCertificados._busqueda || '') + '">' +
-    '<div id="cert-equipo-items"></div>';
-  await pintarEquipoCert();
+    '<div id="cert-bandeja"></div>';
+  await pintarBandejaCert();
 }
 
 // ---------------------------------------------------------------- FORMULARIO
@@ -516,7 +543,7 @@ function iniciarCertificados() {
   $('#cert-lista').addEventListener('input', (ev) => {
     if (ev.target.id !== 'cert-buscar') return;
     pintarCertificados._busqueda = ev.target.value;
-    pintarEquipoCert();
+    pintarBandejaCert();
   });
   $('#cert-lista').addEventListener('click', async (ev) => {
     const b = ev.target.closest('button');
@@ -536,6 +563,7 @@ function iniciarCertificados() {
       } else toast(url);
     } else if ('certReintentar' in b.dataset) enviarColaCert(false);
     else if ('certMisDatos' in b.dataset) cerrarCertificados();
+    else if ('certActualizar' in b.dataset) actualizarCertificados(b);
     else if (b.dataset.certDescartar) {
       const r = await preguntar('¿Descartar este borrador?', 'Se borran sus datos y sus fotos de este celular.', [['si', 'Descartar', 'peligro'], ['no', 'Cancelar', '']]);
       if (r !== 'si') return;

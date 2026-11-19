@@ -39,7 +39,6 @@ var Certificado = (function () {
   var AVISO_LEGAL = [
     ['Carácter', 'Concepto provisional basado exclusivamente en reconocimiento ocular de las áreas accesibles en la fecha de la visita.'],
     ['Alcance técnico', 'No constituye certificación de estabilidad estructural, estudio de vulnerabilidad, peritaje ni concepto técnico definitivo.'],
-    ['Efectos', 'No constituye acto administrativo ni autoriza por sí mismo la conexión o reconexión de servicios públicos; esa decisión corresponde a la empresa prestadora según sus verificaciones.'],
     ['Vigencia', 'El registro oficial es el que administra la DIGER de la Alcaldía de Pereira y se consulta con el código QR. Las impresiones, capturas y copias reflejan únicamente el estado de la información al momento de obtenerlas.'],
     ['Datos personales', 'Los datos personales aquí contenidos se tratan conforme a la Ley 1581 de 2012 y sus normas reglamentarias, con la única finalidad de la gestión del riesgo de desastres y del trámite de servicios públicos. Se prohíbe su divulgación o uso para fines distintos.'],
     ['Exoneración de responsabilidad', 'La entidad no se hace responsable por la alteración, la reproducción fuera de contexto ni las decisiones que terceros adopten con fundamento en copias no verificadas.'],

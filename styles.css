@@ -768,3 +768,5 @@ button.cifra:hover { box-shadow: var(--sombra); }
 .cert-prof img { max-height: 64px; max-width: 220px; margin-top: 6px; background: #fff; border: 1px solid var(--borde); border-radius: 8px; }
 #cert-previa { justify-self: center; }
 #cert-ver-marco { width: 100%; }
+.cert-buscar { width: 100%; min-height: 44px; }
+.chip-concepto.c-anulado { background: #eee; color: #555; text-decoration: line-through; }

@@ -52,6 +52,57 @@ async function abrirCertificados() {
   document.body.classList.add('sin-scroll');
   await pintarCertificados();
   enviarColaCert(true);
+  if (await cargarEquipoCert()) pintarCertificados();
+}
+
+// ---------------------------------------------------------------- DEL EQUIPO (19/11/2026)
+/* Los certificados de todos (Cloudflare /cert/lista, con el código de acceso). Se guardan en el celular (kv certEquipo)
+   para verlos sin señal; cada uno se abre por su enlace, que es la página oficial. */
+const MAX_EQUIPO_VISIBLES = 50;
+const sinTildes = (t) => String(t == null ? '' : t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+/** Lista del equipo sin los propios (ya salen arriba), filtrada por código, dirección, barrio, comuna o profesional. */
+function filtrarEquipoCert(lista, texto, propios) {
+  const q = sinTildes(texto).trim();
+  return (lista || []).filter((c) => propios.indexOf(c.codigo) === -1 &&
+    (!q || sinTildes([c.codigo, c.direccion, c.barrio_vereda, c.comuna, c.prof_nombre].join(' ')).indexOf(q) !== -1));
+}
+
+/** true si trajo una lista nueva. Sin señal o sin Cloudflare, se queda con la guardada. */
+async function cargarEquipoCert() {
+  try {
+    let lista;
+    if (CONFIG.DEMO) lista = Demo.CERT_EQUIPO || [];
+    else {
+      if (!recibeLaNube() || !navigator.onLine) return false;
+      lista = (await alCert('lista', {})).certificados || [];
+    }
+    await DB.guardarKV('certEquipo', { lista, cuando: new Date().toISOString() });
+    return true;
+  } catch (e) { return false; }
+}
+
+function htmlEquipoCert(c) {
+  const anulado = c.estado === 'ANULADO';
+  return '<article class="tarjeta cert-item"><span class="cert-codigo">' + esc(c.codigo) + (anulado ? ' · ANULADO' : '') + '</span>' +
+    '<div class="cert-item-cab"><b>' + esc(c.direccion || 'Sin dirección') + '</b>' +
+    (c.concepto ? '<span class="chip-concepto c-' + esc(anulado ? 'anulado' : c.concepto) + '">' + esc(ROTULO_CONCEPTO[c.concepto] || c.concepto) + '</span>' : '') + '</div>' +
+    '<span class="c-nota">' + esc([c.barrio_vereda, fechaBonita(c.fecha_hora_visita), c.prof_nombre].filter(Boolean).join(' · ')) + '</span>' +
+    '<div class="cert-item-pie"><button type="button" class="btn-secundario btn-chico" data-cert-url="' + esc(c.url || '') + '">Ver certificado</button></div></article>';
+}
+
+async function pintarEquipoCert() {
+  const caja = $('#cert-equipo-items');
+  if (!caja) return;
+  const guardado = (await DB.leerKV('certEquipo')) || { lista: [] };
+  const propios = (await DB.todos('certificados')).map((r) => r.codigo).filter(Boolean);
+  const todos = filtrarEquipoCert(guardado.lista, '', propios);
+  const hallados = filtrarEquipoCert(guardado.lista, ($('#cert-buscar') || {}).value || '', propios);
+  $('#cert-equipo-cuenta').textContent = todos.length;
+  caja.innerHTML = (hallados.length ? hallados.slice(0, MAX_EQUIPO_VISIBLES).map(htmlEquipoCert).join('') +
+    (hallados.length > MAX_EQUIPO_VISIBLES ? '<p class="c-nota">Se muestran ' + MAX_EQUIPO_VISIBLES + ' de ' + hallados.length + '. Escriba para buscar.</p>' : '')
+    : '<p class="c-nota">' + (todos.length ? 'Ninguno coincide con la búsqueda.' : 'Aún no hay certificados de otros ingenieros' +
+      (guardado.cuando ? '.' : ' (se cargan con señal).')) + '</p>');
 }
 
 function cerrarCertificados() {
@@ -113,7 +164,12 @@ async function pintarCertificados() {
   $('#cert-lista').innerHTML =
     (falta ? '<div class="cert-aviso"><span>' + esc(falta) + '</span><button type="button" class="btn-secundario btn-chico" data-cert-mis-datos>Ir a Mis datos</button></div>' : '') +
     (todos.length ? grupo('Borradores', de('borrador')) + grupo('Por enviar', de('cola')) + grupo('Emitidos', de('emitido'))
-      : vacioHtml('Aún no ha emitido certificados.', 'Toque "Nuevo certificado" para llenar el concepto técnico en la visita.'));
+      : vacioHtml('Aún no ha emitido certificados.', 'Toque "Nuevo certificado" para llenar el concepto técnico en la visita.')) +
+    '<h3 class="cert-grupo">Del equipo <span class="cuenta" id="cert-equipo-cuenta">0</span></h3>' +
+    '<input type="search" id="cert-buscar" class="cert-buscar" placeholder="Buscar por código, dirección, barrio o ingeniero" autocomplete="off" value="' +
+    esc(pintarCertificados._busqueda || '') + '">' +
+    '<div id="cert-equipo-items"></div>';
+  await pintarEquipoCert();
 }
 
 // ---------------------------------------------------------------- FORMULARIO
@@ -457,6 +513,11 @@ function iniciarCertificados() {
   $('#cert-emitir').addEventListener('click', emitirCert);
   $('#cert-ver-volver').addEventListener('click', cerrarVerCert);
 
+  $('#cert-lista').addEventListener('input', (ev) => {
+    if (ev.target.id !== 'cert-buscar') return;
+    pintarCertificados._busqueda = ev.target.value;
+    pintarEquipoCert();
+  });
   $('#cert-lista').addEventListener('click', async (ev) => {
     const b = ev.target.closest('button');
     if (!b) return;
@@ -465,6 +526,9 @@ function iniciarCertificados() {
       const reg = await DB.leer('certificados', b.dataset.certVer);
       if (reg && reg.url && !CONFIG.DEMO) window.open(reg.url, '_blank', 'noopener');
       else verCertificadoLocal(b.dataset.certVer, 'vista-certificados');
+    } else if ('certUrl' in b.dataset) {
+      if (b.dataset.certUrl) window.open(b.dataset.certUrl, '_blank', 'noopener');
+      else toast('En la demostración los certificados del equipo no se abren.');
     } else if (b.dataset.certCopiar) {
       const url = b.dataset.certCopiar;
       if (navigator.clipboard && window.isSecureContext) {

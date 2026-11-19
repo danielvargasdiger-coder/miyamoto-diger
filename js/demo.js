@@ -347,9 +347,16 @@ var Demo = (function () {
     ];
   }
   var CERTIFICADOS = certificados();
+  /** Certificados de otros ingenieros (lista "Del equipo"). Inventados; sin enlace en la demostración. */
+  var CERT_EQUIPO = [
+    { codigo: 'SP-DEMO-Q2W8', url: '', estado: 'EMITIDO', fecha_hora_visita: new Date(Date.now() - 86400000).toISOString(), direccion: 'Calle 19 # 8-44',
+      barrio_vereda: 'Centro', comuna: 'Centro', concepto: 'condicionado', prof_nombre: 'Carlos Andrés Mejía' },
+    { codigo: 'SP-DEMO-H7JK', url: '', estado: 'EMITIDO', fecha_hora_visita: new Date(Date.now() - 3 * 86400000).toISOString(), direccion: 'Mz 12 Cs 4',
+      barrio_vereda: 'Villa Santana', comuna: 'Villa Santana', concepto: 'favorable', prof_nombre: 'Diana Marcela Ríos' }
+  ];
 
   return {
-    PERFIL: PERFIL, N_EVALUACIONES: N_EVALUACIONES, CERTIFICADOS: CERTIFICADOS,
+    PERFIL: PERFIL, N_EVALUACIONES: N_EVALUACIONES, CERTIFICADOS: CERTIFICADOS, CERT_EQUIPO: CERT_EQUIPO,
     fotoCertificado: function (semilla, j) { return fotoFachada(semilla, 2, 'verde', j + 1); },
     datosDeEvaluacion: datosDeEvaluacion, idDeEvaluacion: idDeEvaluacion, evaluaciones: evaluaciones, datosDe: datosDe,
     resumen: resumen, solicitudes: solicitudes, fotosDe: fotosDe, firma: firma,

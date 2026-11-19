@@ -320,7 +320,9 @@ const CAMPOS_PERFIL = [
   ['nombre', 'Nombre completo', 'text', true],
   ['tipo_doc', 'Tipo de documento', 'doc', true],
   ['num_doc', 'Número de documento', 'numeric', true],
-  ['matricula', 'Matrícula / tarjeta profesional', 'text', false]
+  ['matricula', 'Matrícula / tarjeta profesional', 'text', false],
+  // Solo en este celular (no va a TECNICOS): sale en los certificados de servicios públicos.
+  ['profesion', 'Profesión (para los certificados de servicios públicos)', 'text', false]
 ];
 
 // ---------------------------------------------------------------- ENTIDAD Y DEPENDENCIA

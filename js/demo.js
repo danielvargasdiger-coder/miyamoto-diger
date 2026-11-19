@@ -19,7 +19,7 @@ var Demo = (function () {
 
   var PERFIL = {
     nombre: 'Laura Restrepo Ocampo', tipo_doc: 'cc', num_doc: '1088000001', matricula: '66202-00001 RSD',
-    entidad_ficha: 'Alcaldía de Pereira', dependencia: 'DIGER'
+    profesion: 'Ingeniera civil', entidad_ficha: 'Alcaldía de Pereira', dependencia: 'DIGER'
   };
 
   /** Equipo de ejemplo. El primero se reemplaza por quien ingresó a la demostración. */
@@ -330,8 +330,27 @@ var Demo = (function () {
     return { fotos: fotos, firma: firma(d.eval_nombre) };
   }
 
+  // ---------------------------------------------------------------- CERTIFICADOS DE SERVICIOS PÚBLICOS (19/11/2026)
+  /** Uno emitido (favorable) y un borrador. Inventados; las fotos se dibujan en el navegador (fotoCertificado). */
+  function certificados() {
+    var hace = function (dias, h) { var f = new Date(Date.now() - dias * 86400000); f.setHours(h, 20, 0, 0); return f.toISOString(); };
+    var prof = { prof_nombre: PERFIL.nombre, prof_profesion: PERFIL.profesion, prof_matricula: PERFIL.matricula, prof_num_doc: PERFIL.num_doc };
+    var base = { ubicacion: null, ficha_catastral: '', uso_otro: '', obs_sin_dano: false, obs_indicios: false, obs_zonas_sin_evaluar: false };
+    return [
+      { id: 'CSP-20261117-102000-DEM1', estado: 'emitido', codigo: 'SP-DEMO-K7F3', url: '', fotos: [], creado: hace(2, 10), emitido: hace(2, 11),
+        datos: Object.assign({}, base, prof, { fecha_hora_visita: hace(2, 10), direccion: 'Cra 9 # 21-15', barrio_vereda: 'Centro', comuna: 'Centro',
+          ficha_catastral: '01-02-0345-0012-000', uso: 'vivienda', propietario: 'Martha Lucía Henao', areas: 'int_ext', obs_sin_dano: true,
+          reparaciones: 'Resane y pintura de fisuras en muros divisorios del segundo piso; cambio de tejas fracturadas.', concepto: 'favorable' }) },
+      { id: 'CSP-20261119-083000-DEM2', estado: 'borrador', fotos: [], creado: hace(0, 8),
+        datos: Object.assign({}, base, prof, { fecha_hora_visita: hace(0, 8), direccion: 'Calle 14 # 6-32', barrio_vereda: 'Boston', comuna: 'Boston',
+          uso: 'local_comercial', propietario: 'Ferretería El Tornillo', areas: 'parcial', obs_indicios: true, reparaciones: '', concepto: '' }) }
+    ];
+  }
+  var CERTIFICADOS = certificados();
+
   return {
-    PERFIL: PERFIL, N_EVALUACIONES: N_EVALUACIONES,
+    PERFIL: PERFIL, N_EVALUACIONES: N_EVALUACIONES, CERTIFICADOS: CERTIFICADOS,
+    fotoCertificado: function (semilla, j) { return fotoFachada(semilla, 2, 'verde', j + 1); },
     datosDeEvaluacion: datosDeEvaluacion, idDeEvaluacion: idDeEvaluacion, evaluaciones: evaluaciones, datosDe: datosDe,
     resumen: resumen, solicitudes: solicitudes, fotosDe: fotosDe, firma: firma,
     numeroDemo: function () { return numeroDemo(Math.random); }

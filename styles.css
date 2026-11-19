@@ -715,3 +715,56 @@ button.cifra:hover { box-shadow: var(--sombra); }
   .lista { padding-bottom: calc(160px + env(safe-area-inset-bottom)); }
   .tablero { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
 }
+
+/* ------------------------------------------------------------ CERTIFICADOS DE SERVICIOS PÚBLICOS (19/11/2026) */
+/* Fila discreta en "Mis datos": el módulo es para pocos ingenieros, la app gira en torno a Miyamoto. */
+.fila-modulo { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; text-align: left; font: inherit;
+  color: var(--texto); cursor: pointer; }
+.fila-modulo > .ico { width: 20px; height: 20px; flex: none; color: var(--texto-suave); }
+.fila-modulo-ico { flex: none; width: 40px; height: 40px; border-radius: 10px; background: var(--azul-claro); color: var(--azul);
+  display: grid; place-items: center; }
+.fila-modulo-ico .ico { width: 22px; height: 22px; }
+.fila-modulo-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.fila-modulo-texto span { font-size: .85rem; color: var(--texto-suave); }
+
+#vista-certificados .ficha-cab .btn-claro { flex: none; }
+.cert-grupo { margin: 6px 0 -4px; font-size: .95rem; color: var(--texto-suave); display: flex; align-items: center; gap: 8px; }
+.cert-grupo .cuenta { background: var(--azul-claro); color: var(--azul); border-radius: 999px; padding: 0 8px; font-size: .8rem; }
+.cert-item { display: grid; gap: 6px; }
+.cert-item-cab { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.cert-item-cab b { overflow-wrap: anywhere; }
+.cert-codigo { font-weight: 700; color: var(--azul); letter-spacing: .03em; font-size: .9rem; }
+.cert-item-pie { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; }
+.cert-item-pie .c-nota { flex: 1 1 100%; }
+.chip-concepto { flex: none; border-radius: 999px; padding: 2px 10px; font-size: .8rem; font-weight: 700; }
+.chip-concepto.c-favorable { background: var(--verde-fondo); color: var(--verde-texto); }
+.chip-concepto.c-condicionado { background: var(--amarillo-fondo); color: var(--amarillo-texto); }
+.chip-concepto.c-desfavorable { background: var(--rojo-fondo); color: var(--rojo-texto); }
+.cert-aviso { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 8px 0 0; padding: 10px 12px; border-radius: var(--radio);
+  background: var(--amarillo-fondo); border: 1.5px solid #e0b800; color: var(--amarillo-texto); font-size: .9rem; font-weight: 600; }
+.cert-aviso span { flex: 1 1 200px; }
+
+.cert-form { padding-bottom: 24px; }
+.cert-form input[type="text"], .cert-form input[type="datetime-local"], .cert-form textarea { width: 100%; }
+.cert-form label { display: block; margin-top: 10px; }
+.cert-form .campo.con-error { border-color: var(--error); box-shadow: 0 0 0 2px rgba(198, 40, 40, .18); }
+.cert-obs { display: grid; gap: 8px; }
+.cert-obs .chip { text-align: left; border-radius: 10px; padding: 10px 12px; height: auto; line-height: 1.35; }
+.cert-concepto { display: grid; gap: 8px; }
+.cert-concepto button { min-height: 48px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; font: inherit;
+  padding: 10px 12px; border-radius: 10px; border: 2px solid var(--borde); background: #fff; color: var(--texto); cursor: pointer; }
+.cert-concepto button span { font-size: .85rem; color: var(--texto-suave); }
+.cert-concepto button.c-favorable { border-color: var(--verde); }
+.cert-concepto button.c-condicionado { border-color: #e0b800; }
+.cert-concepto button.c-desfavorable { border-color: var(--rojo); }
+.cert-concepto button[aria-checked="true"].c-favorable { background: var(--verde-fondo); }
+.cert-concepto button[aria-checked="true"].c-condicionado { background: var(--amarillo-fondo); }
+.cert-concepto button[aria-checked="true"].c-desfavorable { background: var(--rojo-fondo); }
+.cert-concepto button[aria-checked="true"] { box-shadow: 0 0 0 3px rgba(11, 79, 108, .25); }
+.cert-concepto button[aria-checked="true"] b::before { content: "✓ "; }
+.cert-concepto button:disabled { opacity: .42; cursor: not-allowed; border-style: dashed; }
+.cert-prof { display: grid; gap: 2px; }
+.cert-prof span { color: var(--texto-suave); font-size: .9rem; }
+.cert-prof img { max-height: 64px; max-width: 220px; margin-top: 6px; background: #fff; border: 1px solid var(--borde); border-radius: 8px; }
+#cert-previa { justify-self: center; }
+#cert-ver-marco { width: 100%; }

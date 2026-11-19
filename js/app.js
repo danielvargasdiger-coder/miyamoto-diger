@@ -16,6 +16,7 @@ async function iniciar() {
   enlazarMapa();
   enlazarTablero();
   enlazarCompartir();
+  iniciarCertificados();
   $$('[data-vista]').forEach((b) => b.addEventListener('click', () => irAVista(b.dataset.vista)));
   iniciarEventosFicha();
   iniciarEventosFirma();

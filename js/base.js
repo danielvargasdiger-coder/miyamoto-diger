@@ -4,7 +4,7 @@
    ========================================================================= */
 'use strict';
 
-const VERSION_APP = 'miyamoto-63';     // subirla junto con VERSION en sw.js
+const VERSION_APP = 'miyamoto-64';     // subirla junto con VERSION en sw.js
 
 const APP = {
   perfil: null,          // { codigo, entidad, nombre, tipo_doc, num_doc, id_evaluador, matricula, dependencia }
@@ -37,7 +37,7 @@ const DB = {
   async abrir() {
     if (this._db) return this._db;
     this._db = await new Promise((ok, fallo) => {
-      const req = indexedDB.open(NOMBRE_BD, 2);
+      const req = indexedDB.open(NOMBRE_BD, 3);
       req.onupgradeneeded = (ev) => {
         const db = ev.target.result;
         // v1: lo de siempre (solo en una instalación nueva: rehacerlos borraría la cola y los borradores).
@@ -50,6 +50,8 @@ const DB = {
         }
         // v2 (19/10): las evaluaciones del equipo, una por fila (antes, 800 dentro de kv.catalogo).
         if (ev.oldVersion < 2) db.createObjectStore('evaluaciones', { keyPath: 'id' });
+        // v3 (19/11): certificados de servicios públicos (sus fotos van al almacén 'fotos' de siempre).
+        if (ev.oldVersion < 3) db.createObjectStore('certificados', { keyPath: 'id' });
       };
       // Otra pestaña con la versión vieja abierta frena la actualización de la base: se avisa (19/10).
       req.onblocked = () => { if (typeof toast === 'function') toast('Cierre las otras pestañas de la app para terminar de actualizarla.', 'error'); };

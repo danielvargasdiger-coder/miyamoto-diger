@@ -187,6 +187,11 @@
         </div>
         <button type="submit" class="btn-principal">Guardar mis datos</button>
       </form>
+      <button type="button" id="btn-certificados" class="tarjeta fila-modulo">
+        <span class="fila-modulo-ico" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></span>
+        <span class="fila-modulo-texto"><b>Certificados de servicios públicos</b><span>Concepto técnico para reconexión</span></span>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
       <!-- El QR va escrito aquí dentro, no como archivo aparte: así se ve sin
            señal. Apunta a CONFIG.URL_PUBLICA; si esa dirección cambia, hay que
            regenerarlo (herramientas/qr_app.svg y la prueba probar_app.js). -->
@@ -209,6 +214,42 @@
     </div>
   </section>
 
+  <!-- ============================================================ CERTIFICADOS DE SERVICIOS PÚBLICOS (19/11/2026) -->
+  <section id="vista-certificados" class="vista pantalla" hidden>
+    <header class="ficha-cab">
+      <button type="button" id="cert-volver" class="btn-icono" aria-label="Volver al menú">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="ficha-cab-texto"><b>Certificados de servicios públicos</b><span>Concepto técnico para reconexión</span></div>
+      <button type="button" id="cert-nuevo" class="btn-claro">Nuevo certificado</button>
+    </header>
+    <div class="menu-cuerpo" id="cert-lista"></div>
+  </section>
+
+  <section id="vista-cert-form" class="vista pantalla" hidden>
+    <header class="ficha-cab">
+      <button type="button" id="cert-form-volver" class="btn-icono" aria-label="Guardar y volver">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="ficha-cab-texto"><b id="cert-form-titulo">Certificado nuevo</b><span>Se guarda solo mientras llena</span></div>
+    </header>
+    <form id="cert-form" class="menu-cuerpo cert-form" novalidate></form>
+    <footer class="ficha-pie">
+      <button type="button" id="cert-guardar" class="btn-secundario">Guardar borrador</button>
+      <button type="button" id="cert-emitir" class="btn-principal">Emitir certificado</button>
+    </footer>
+  </section>
+
+  <section id="vista-cert-ver" class="vista pantalla" hidden>
+    <header class="ficha-cab">
+      <button type="button" id="cert-ver-volver" class="btn-icono" aria-label="Volver">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="ficha-cab-texto"><b id="cert-ver-titulo">Certificado</b><span>Así lo ve quien escanea el QR</span></div>
+    </header>
+    <iframe id="cert-ver-marco" class="previa-marco" title="Certificado"></iframe>
+  </section>
+
   <dialog id="dialogo" class="dialogo">
     <h2 id="dialogo-titulo"></h2>
     <p id="dialogo-texto"></p>
@@ -222,6 +263,8 @@
   <script src="config.js"></script>
   <script src="js/esquema.js"></script>
   <script src="js/ficha.js"></script>
+  <script src="vendor/qrcode.js"></script>
+  <script src="js/certificado.js"></script>
   <script src="js/demo.js"></script>
   <script src="js/base.js"></script>
   <script src="js/gps.js"></script>
@@ -229,6 +272,7 @@
   <script src="js/zonas.js"></script>
   <script src="js/formulario.js"></script>
   <script src="js/envio.js"></script>
+  <script src="js/certificados.js"></script>
   <script src="js/compartir.js"></script>
   <script src="js/mapa.js"></script>
   <script src="js/tablero.js"></script>

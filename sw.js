@@ -16,7 +16,7 @@
  */
 const ENTORNO = self.location.pathname.indexOf('/pruebas/') !== -1 ? 'pruebas' : 'prod';
 const PREFIJO = 'miyamoto-' + ENTORNO;
-const VERSION = PREFIJO + '-v63';
+const VERSION = PREFIJO + '-v64';
 
 /**
  * Cuadritos del mapa ya vistos. NO lleva el número de versión: borrarlos en
@@ -36,6 +36,8 @@ const ARCHIVOS = [
   './manifest.json',
   './js/esquema.js',
   './js/ficha.js',
+  './vendor/qrcode.js',          // QR del certificado de servicios públicos
+  './js/certificado.js',
   './js/demo.js',
   './js/base.js',
   './js/gps.js',
@@ -43,6 +45,7 @@ const ARCHIVOS = [
   './js/zonas.js',
   './js/formulario.js',
   './js/envio.js',
+  './js/certificados.js',
   './js/compartir.js',
   './js/verficha.js',
   './ficha.html',
@@ -58,6 +61,7 @@ const ARCHIVOS = [
   './img/icon-192.png',
   './img/icon-512.png',
   './img/logo-app.png',
+  './img/logo-diger-alcaldia.png',
   './img/logo-diger.png',
   './datos/zonas.json',
   './img/ejemplo-movimiento-masa.jpg',

@@ -115,6 +115,8 @@ async function enviarCola(silencioso) {
     _enviando = false;
     await recargarLocales();
     pintarInicio();
+    // Los certificados de servicios públicos tienen su propia cola (certificados.js).
+    if (typeof enviarColaCert === 'function') enviarColaCert(true);
   }
   if (_repetir) { _repetir = false; enviarCola(true); }
   if (!silencioso || bien) {

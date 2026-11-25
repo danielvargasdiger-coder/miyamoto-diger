@@ -229,6 +229,16 @@ var Demo = (function () {
         lat: +(b[1] + (r() - 0.5) * 0.004).toFixed(6), lon: +(b[2] + (r() - 0.5) * 0.004).toFixed(6),
         fecha: new Date(Date.now() - [1, 4, 9, 20, 0, 12, 30, 2][i % 8] * 86400000).toISOString()   // para ver "Hace N días"
       };
+    }).map(function (s, i) {
+      // 25/11: como en la hoja real, las de manzana y casa (y una con dirección) llegan SIN coordenadas exactas y con
+      // ubicación aproximada: en el mapa salen como aro hueco.
+      var porDireccion = i === 2;
+      if (!/^Mz /.test(s.direccion) && !porDireccion) return s;
+      s.lat_aprox = porDireccion ? s.lat : BARRIOS.filter(function (x) { return x[0] === s.barrio; })[0][1];
+      s.lon_aprox = porDireccion ? s.lon : BARRIOS.filter(function (x) { return x[0] === s.barrio; })[0][2];
+      s.ubic_aprox = porDireccion ? 'por dirección' : 'centro del barrio ' + s.barrio;
+      s.lat = ''; s.lon = '';
+      return s;
     }).filter(function (s, i) { return !SOLICITUDES[i][1] || SOLICITUDES[i][1] === '@yo'; })
       .map(function (s, i) { s.para_mi = !!s.asignado; return s; });
   }

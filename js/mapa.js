@@ -14,12 +14,24 @@ const MAPA = { mapa: null, capa: null, yo: null, filtro: 'todas', reencuadrar: t
 const COLOR_PUNTO = { verde: '#12a150', amarillo: '#e0b800', rojo: '#e3000f', porEvaluar: '#0b4f6c', sin: '#78909c' };
 const FILTROS_MAPA = [['todas', 'Todas'], ['porEvaluar', 'Por evaluar'], ['evaluadas', 'Evaluadas']];
 
+/**
+ * Dónde va una solicitud en el mapa (25/11/2026): la coordenada exacta de la hoja, o si no hay, la APROXIMADA
+ * (UBICACION_APROX: por la dirección o el centro del barrio o vereda), que se dibuja hueca. Es solo una guía:
+ * la coordenada de la visita la toma el GPS al abrir la encuesta. null = va solo en la lista.
+ */
+function puntoDeSolicitud(s) {
+  if (Esquema.coordenadaValida(s.lat, s.lon)) return { lat: +s.lat, lon: +s.lon, aprox: false };
+  if (Esquema.coordenadaValida(s.lat_aprox, s.lon_aprox)) return { lat: +s.lat_aprox, lon: +s.lon_aprox, aprox: true, como: s.ubic_aprox || '' };
+  return null;
+}
+
 /** Puntos del mapa a partir de lo que hay en el celular. */
 function puntosDelMapa() {
   const puntos = [];
   solicitudesPendientes().filter(coincideSolicitud).forEach((s) => {
-    if (!Esquema.coordenadaValida(s.lat, s.lon)) return;
-    puntos.push({ tipo: 'porEvaluar', lat: +s.lat, lon: +s.lon, s });
+    const u = puntoDeSolicitud(s);
+    if (!u) return;
+    puntos.push({ tipo: 'porEvaluar', lat: u.lat, lon: u.lon, aprox: u.aprox, como: u.como, s });
   });
   const vistos = new Set();
   (APP.enviadasLocal || []).concat(APP.historial).forEach((h) => {
@@ -40,6 +52,7 @@ function htmlPopup(p) {
   if (p.tipo === 'porEvaluar') {
     const s = p.s;
     return '<b>' + esc(s.direccion || 'Sin dirección') + '</b><br>' + esc([s.barrio, s.prioridad].filter(Boolean).join(' · ')) +
+      (p.aprox ? '<br><span class="pop-aprox">Ubicación aproximada (' + esc(p.como || 'referencia') + ')</span>' : '') +
       (s.descripcion ? '<br><span class="pop-desc">' + esc(s.descripcion) + '</span>' : '') +
       '<br><button type="button" class="btn-principal btn-chico pop-btn" data-evaluar="' + esc(s.id_solicitud) + '">Evaluar</button>' +
       '<a class="btn-secundario btn-chico pop-btn" target="_blank" rel="noopener" href="' + esc(urlComoLlegar(s)) + '">' + icono('ruta') + 'Cómo llegar</a>';
@@ -88,15 +101,29 @@ function pintarMapa() {
   // y parece que no queda nada por evaluar (pasó en taludes).
   // "Por evaluar" cuenta lo mismo que la lista, aunque alguna visita no tenga
   // ubicación (el celular decía 0 en el mapa y 1 en la lista).
-  const sinUbicacion = solicitudesPendientes().filter(coincideSolicitud).filter((s) => !Esquema.coordenadaValida(s.lat, s.lon)).length;
+  const sinUbicacion = solicitudesPendientes().filter(coincideSolicitud).filter((s) => !puntoDeSolicitud(s)).length;
+  const aproximadas = todos.filter((p) => p.aprox).length;
   const conPunto = todos.filter((p) => p.tipo === 'porEvaluar').length;
   const cuentas = { porEvaluar: conPunto + sinUbicacion, evaluadas: todos.length - conPunto };
   cuentas.todas = cuentas.porEvaluar + cuentas.evaluadas;
   $('#mapa-filtros').innerHTML = FILTROS_MAPA.map(([k, t]) =>
     '<button type="button" class="chip chip-mapa" data-filtro-mapa="' + k + '" aria-checked="' + (MAPA.filtro === k) + '">' +
     t + ' <span class="cuenta">' + cuentas[k] + '</span></button>').join('');
-  $('#mapa-leyenda').innerHTML = [['porEvaluar', 'Por evaluar'], ['verde', 'Habitable'], ['amarillo', 'Uso restringido'], ['rojo', 'No habitable']]
-    .map(([c, t]) => '<span><i style="background:' + COLOR_PUNTO[c] + '"></i>' + t + '</span>').join('') +
+  // La leyenda sigue al filtro: cada grupo sale solo si sus puntos pueden verse.
+  // Por evaluar = lleno (exacta) y hueco (aproximada); Evaluadas = color del concepto.
+  const simbolo = (estilo, t) => '<span><i ' + estilo + '></i>' + t + '</span>';
+  const grupo = (titulo, items) => '<span class="leyenda-grupo"><b>' + titulo + '</b>' + items + '</span>';
+  const leyenda = [];
+  if (MAPA.filtro !== 'evaluadas') {
+    leyenda.push(grupo('Por evaluar:',
+      simbolo('style="background:' + COLOR_PUNTO.porEvaluar + '"', 'ubicación exacta (' + (conPunto - aproximadas) + ')') +
+      simbolo('class="leyenda-hueco" style="border-color:' + COLOR_PUNTO.porEvaluar + '"', 'aproximada (' + aproximadas + ')')));
+  }
+  if (MAPA.filtro !== 'porEvaluar') {
+    leyenda.push(grupo('Evaluadas:', [['verde', 'Habitable'], ['amarillo', 'Uso restringido'], ['rojo', 'No habitable']]
+      .map(([c, t]) => simbolo('style="background:' + COLOR_PUNTO[c] + '"', t)).join('')));
+  }
+  $('#mapa-leyenda').innerHTML = leyenda.join('') +
     (sinUbicacion && MAPA.filtro !== 'evaluadas'
       ? '<span class="mapa-sin-ubicacion">' + sinUbicacion + (sinUbicacion === 1 ? ' visita sin ubicación: está solo en la lista' : ' visitas sin ubicación: están solo en la lista') + '</span>' : '');
 
@@ -106,9 +133,10 @@ function pintarMapa() {
   // Miles de puntos (19/10): la ventanita se arma al tocar el punto (armarlas todas tardaba segundos).
   visibles.forEach((p) => {
     const color = p.tipo === 'porEvaluar' ? COLOR_PUNTO.porEvaluar : COLOR_PUNTO[p.color];
-    L.circleMarker([p.lat, p.lon], {
-      radius: p.tipo === 'porEvaluar' ? 8 : 7, color: '#fff', weight: 2, fillColor: color, fillOpacity: 0.95
-    }).bindPopup(() => htmlPopup(p), { maxWidth: 260 }).addTo(MAPA.capa);
+    // Aproximada: aro hueco y punteado, para que nadie la tome por la ubicación exacta.
+    const estilo = p.aprox ? { radius: 9, color, weight: 3, dashArray: '4 3', fillColor: '#ffffff', fillOpacity: 0.55 }
+      : { radius: p.tipo === 'porEvaluar' ? 8 : 7, color: '#fff', weight: 2, fillColor: color, fillOpacity: 0.95 };
+    L.circleMarker([p.lat, p.lon], estilo).bindPopup(() => htmlPopup(p), { maxWidth: 260 }).addTo(MAPA.capa);
   });
   if (MAPA.reencuadrar && visibles.length) {
     MAPA.mapa.fitBounds(L.latLngBounds(visibles.map((p) => [p.lat, p.lon])), { padding: [30, 30], maxZoom: 16 });

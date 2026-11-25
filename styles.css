@@ -775,3 +775,9 @@ button.cifra:hover { box-shadow: var(--sombra); }
 .cert-bandeja-cab .btn-chico { flex: none; }
 #cert-bandeja-cuando { margin: -8px 0 -4px; }
 #cert-bandeja { display: grid; gap: 14px; }
+/* Solicitud con ubicación aproximada (25/11/2026): aro hueco en la leyenda y aviso en la ventanita. */
+.mapa-leyenda i.leyenda-hueco { background: #fff; border: 2px dashed; box-shadow: none; width: 12px; height: 12px; }
+.mapa-leyenda .leyenda-grupo { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.mapa-leyenda .leyenda-grupo b { font-weight: 600; color: var(--texto); }
+@media (max-width: 480px) { .mapa-leyenda { font-size: .78rem; } .mapa-leyenda .leyenda-grupo { column-gap: 10px; } }
+.pop-aprox { display: inline-block; margin-top: 2px; font-size: .82rem; font-style: italic; color: var(--texto-suave); }

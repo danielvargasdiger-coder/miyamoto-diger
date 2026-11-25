@@ -35,6 +35,8 @@ var Demo = (function () {
     ['Villa Santana', 4.7959, -75.6671], ['El Jardín', 4.8090, -75.7145], ['Samaria', 4.7960, -75.7095],
     ['Los Corales', 4.8012, -75.7464], ['Perla del Otún', 4.7963, -75.7298]
   ];
+  // Veredas (centro de app/datos/zonas.json): solo para solicitudes rurales; las evaluaciones siguen en BARRIOS.
+  var VEREDAS = [['El Retiro', 4.757268, -75.738494]];
   var CONTACTOS = ['María López', 'Jorge Ruiz', 'Luz Dary Cardona', 'Hernán Gallego', 'Olga Patricia Marín', 'Fabio Arango',
     'Rosa Elena Valencia', 'Andrés Castaño', 'Gloria Henao', 'Wilson Toro'];
   var EDIFICIOS = ['Edificio Los Cedros', 'Conjunto Torres del Parque', 'Colegio San José (bloque B)', 'Edificio Mariela',
@@ -53,7 +55,9 @@ var Demo = (function () {
   };
 
   var SOLICITUDES = [
-    // [prioridad, asignado ('@yo' = quien ingresó, '' = todos), dirección, barrio, contacto, teléfono, descripción]
+    // [prioridad, asignado ('@yo' = quien ingresó, '' = todos), dirección, barrio o vereda, contacto, teléfono, descripción,
+    //  ubicación: 'c' centro del barrio o vereda, 'd' aproximada por dirección, [lat, lon] exacta fija;
+    //  sin nada: las de Mz al centro del barrio, la 3.ª por dirección y las demás exactas]
     ['ALTA', '@yo', 'Cra 7 # 18-40', 'Centro', 'María López', '3001234567', 'Grietas grandes en muros después del sismo; la familia sigue adentro.'],
     ['ALTA', '@yo', 'Mz 4 Cs 12', 'Cuba', 'Jorge Ruiz', '3109876543', 'Se cayó parte del cielo raso y hay fisuras en una columna.'],
     ['MEDIA', '@yo', 'Cll 19 # 11-25', 'San Nicolás', 'Luz Dary Cardona', '3154445566', 'Fisuras en la fachada y vidrios rotos.'],
@@ -64,7 +68,18 @@ var Demo = (function () {
     ['BAJA', '', 'Cll 14 # 23-51', 'El Jardín', 'Andrés Castaño', '3183332211', 'Desprendimiento de tejas.'],
     ['ALTA', 'Carlos Andrés Mejía', 'Cra 5 # 31-60', 'Villavicencio', 'Gloria Henao', '3006667788', 'Edificio de 4 pisos con grietas en escaleras.'],
     ['MEDIA', 'Diana Marcela Ríos', 'Mz 9 Cs 20', 'Samaria', 'Wilson Toro', '3141112233', 'Muros divisorios agrietados.'],
-    ['BAJA', 'Julián Osorio Cardona', 'Cll 80 # 18-04', 'Los Corales', 'María López', '3175554433', 'Fisura en muro de patio.']
+    ['BAJA', 'Julián Osorio Cardona', 'Cll 80 # 18-04', 'Los Corales', 'María López', '3175554433', 'Fisura en muro de patio.'],
+    // 25/11: varias en el MISMO punto, para ver en el mapa el aro con el número y la lista al tocarlo.
+    ['ALTA', '@yo', 'Cll 19 # 7-15', 'Centro', 'Claudia Patricia Rojas', '3185550606', 'Grietas en el muro de fachada.', 'c'],
+    ['MEDIA', '@yo', 'Cra 8 # 20-44', 'Centro', 'Héctor Fabio Loaiza', '3195550707', 'Cielo raso desprendido en la sala.', 'c'],
+    ['BAJA', '@yo', 'Cll 21 # 6-30', 'Centro', 'Sandra Milena Arias', '3005550808', 'Fisura en el baño.', 'c'],
+    ['ALTA', '@yo', 'Cra 6 # 18-09', 'Centro', 'Edwin Alberto Ramírez', '3015550909', 'Columna con el acero a la vista.', 'c'],
+    ['MEDIA', '@yo', 'Cll 17 # 27-29 Conjunto Residencial Serrana', 'Centro', 'Nubia Patiño', '3025551010', 'Muro de cerramiento inclinado.', 'c'],
+    ['ALTA', '@yo', 'Finca La Esperanza', 'El Retiro', 'Luz Mery Ocampo', '3112345678', 'Casa de bahareque con muros caídos.', 'c'],
+    ['MEDIA', '@yo', 'Finca El Mirador', 'El Retiro', 'Ramiro Ospina', '3135550101', 'Deslizamiento detrás de la casa.', 'c'],
+    ['BAJA', '@yo', 'Sector la escuela', 'El Retiro', 'Dora Inés Salazar', '3145550202', 'Tejas rotas.', 'c'],
+    ['ALTA', '@yo', 'Cra 12 # 25-08 apto 301', 'Boston', 'Nelson Grisales', '3155550303', 'Grietas en las escaleras del edificio.', [4.8003, -75.6968]],
+    ['MEDIA', '@yo', 'Cra 12 # 25-08 apto 502', 'Boston', 'Amparo Quintero', '3165550404', 'Grietas en las escaleras del edificio.', [4.8003, -75.6968]]
   ];
 
   /** Números al azar que salen iguales cada vez (misma semilla, misma demostración). */
@@ -221,7 +236,7 @@ var Demo = (function () {
   function solicitudes(yo) {
     var anio = new Date().getFullYear();
     return SOLICITUDES.map(function (s, i) {
-      var b = BARRIOS.filter(function (x) { return x[0] === s[3]; })[0] || BARRIOS[0];
+      var b = BARRIOS.concat(VEREDAS).filter(function (x) { return x[0] === s[3]; })[0] || BARRIOS[0];
       var r = azarCon(31 * (i + 3));
       return {
         id_solicitud: 'SOL-' + anio + '-' + pad(101 + i), prioridad: s[0], asignado: s[1] === '@yo' ? (yo || PERFIL.nombre) : s[1],
@@ -232,11 +247,15 @@ var Demo = (function () {
     }).map(function (s, i) {
       // 25/11: como en la hoja real, las de manzana y casa (y una con dirección) llegan SIN coordenadas exactas y con
       // ubicación aproximada: en el mapa salen como aro hueco.
-      var porDireccion = i === 2;
-      if (!/^Mz /.test(s.direccion) && !porDireccion) return s;
-      s.lat_aprox = porDireccion ? s.lat : BARRIOS.filter(function (x) { return x[0] === s.barrio; })[0][1];
-      s.lon_aprox = porDireccion ? s.lon : BARRIOS.filter(function (x) { return x[0] === s.barrio; })[0][2];
-      s.ubic_aprox = porDireccion ? 'por dirección' : 'centro del barrio ' + s.barrio;
+      var como = SOLICITUDES[i][7];
+      if (Array.isArray(como)) { s.lat = como[0]; s.lon = como[1]; return s; }      // exacta fija (mismo edificio)
+      como = como || (i === 2 ? 'd' : /^Mz /.test(s.direccion) ? 'c' : 'x');
+      if (como === 'x') return s;
+      var vereda = VEREDAS.filter(function (x) { return x[0] === s.barrio; })[0];
+      var centro = vereda || BARRIOS.filter(function (x) { return x[0] === s.barrio; })[0];
+      s.lat_aprox = como === 'd' ? s.lat : centro[1];
+      s.lon_aprox = como === 'd' ? s.lon : centro[2];
+      s.ubic_aprox = como === 'd' ? 'por dirección' : (vereda ? 'centro de la vereda ' : 'centro del barrio ') + s.barrio;
       s.lat = ''; s.lon = '';
       return s;
     }).filter(function (s, i) { return !SOLICITUDES[i][1] || SOLICITUDES[i][1] === '@yo'; })

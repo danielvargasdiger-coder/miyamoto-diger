@@ -12,6 +12,8 @@
 const MAPA = { mapa: null, capa: null, yo: null, filtro: 'todas', reencuadrar: true };
 
 const COLOR_PUNTO = { verde: '#12a150', amarillo: '#e0b800', rojo: '#e3000f', porEvaluar: '#0b4f6c', sin: '#78909c' };
+// La ventanita se abre debajo de los botones + / - y Dónde estoy, y encima del botón + Nueva (en el celular los tapaban, 25/11).
+const VENTANITA = { autoPanPaddingTopLeft: [10, 96], autoPanPaddingBottomRight: [10, 80] };
 const FILTROS_MAPA = [['todas', 'Todas'], ['porEvaluar', 'Por evaluar'], ['evaluadas', 'Evaluadas']];
 
 /**
@@ -67,24 +69,49 @@ function agruparPorPunto(puntos) {
   return salida.map((p) => (p.tipo === 'grupo' && p.items.length === 1 ? p.items[0] : p));
 }
 
+/** Teléfono para el enlace tel: (solo dígitos y +); '' si no hay: un tel: vacío abre el marcador sin número. */
+function telParaLlamar(t) {
+  return String(t == null ? '' : t).replace(/[^\d+]/g, '');
+}
+
+/**
+ * Lo que el ingeniero necesita para ubicarse y avisar antes de llegar (25/11): prioridad, hace cuánto entró,
+ * a quién buscar y su teléfono. Las mismas etiquetas que la tarjeta de "Visitas".
+ */
+function etiquetasSolicitud(s) {
+  return '<span class="pop-etiquetas"><span class="prioridad p-' + esc(String(s.prioridad || '').toLowerCase()) + '">' +
+    esc(s.prioridad || 'Sin prioridad') + '</span>' + htmlAntiguedad(diasDeSolicitud(s, Date.now())) + '</span>';
+}
+
+function contactoSolicitud(s) {
+  if (!s.contacto && !s.telefono) return '';
+  return '<span class="pop-contacto">Contacto: <b>' + esc(s.contacto || 'sin nombre') + '</b>' + (s.telefono ? ' · ' + esc(s.telefono) : '') + '</span>';
+}
+
 function botonesSolicitud(s) {
-  return '<br><button type="button" class="btn-principal btn-chico pop-btn" data-evaluar="' + esc(s.id_solicitud) + '">Evaluar</button>' +
-    '<a class="btn-secundario btn-chico pop-btn" target="_blank" rel="noopener" href="' + esc(urlComoLlegar(s)) + '">' + icono('ruta') + 'Cómo llegar</a>';
+  const tel = telParaLlamar(s.telefono);
+  return '<div class="pop-acciones">' +
+    '<button type="button" class="btn-principal btn-chico pop-btn pop-evaluar" data-evaluar="' + esc(s.id_solicitud) + '">Evaluar</button>' +
+    (tel ? '<a class="btn-secundario btn-chico pop-btn" href="tel:' + esc(tel) + '">' + icono('telefono') + 'Llamar</a>' : '') +
+    '<a class="btn-secundario btn-chico pop-btn" target="_blank" rel="noopener" href="' + esc(urlComoLlegar(s)) + '">' + icono('ruta') + 'Cómo llegar</a>' +
+    '</div>';
 }
 
 function htmlPopup(p) {
   if (p.tipo === 'grupo') {
     const items = p.items.slice().sort((a, b) => (ORDEN_PRIORIDAD[a.s.prioridad] ?? 3) - (ORDEN_PRIORIDAD[b.s.prioridad] ?? 3));
     return '<b>' + p.items.length + ' solicitudes en este punto</b>' +
-      (p.aprox ? '<br><span class="pop-aprox">Ubicación aproximada (' + esc(p.como || 'referencia') + ')</span>' : '') +
-      '<ul class="pop-lista">' + items.map(({ s }) => '<li><b>' + esc(s.direccion || 'Sin dirección') + '</b><br>' +
-        esc([s.barrio, s.prioridad].filter(Boolean).join(' · ')) + botonesSolicitud(s) + '</li>').join('') + '</ul>';
+      (p.aprox ? '<span class="pop-aprox">Ubicación aproximada (' + esc(p.como || 'referencia') + ')</span>' : '') +
+      '<ul class="pop-lista">' + items.map(({ s }) => '<li>' + etiquetasSolicitud(s) + '<b class="pop-dir">' + esc(s.direccion || 'Sin dirección') + '</b>' +
+        contactoSolicitud(s) + botonesSolicitud(s) + '</li>').join('') + '</ul>';
   }
   if (p.tipo === 'porEvaluar') {
     const s = p.s;
-    return '<b>' + esc(s.direccion || 'Sin dirección') + '</b><br>' + esc([s.barrio, s.prioridad].filter(Boolean).join(' · ')) +
-      (p.aprox ? '<br><span class="pop-aprox">Ubicación aproximada (' + esc(p.como || 'referencia') + ')</span>' : '') +
-      (s.descripcion ? '<br><span class="pop-desc">' + esc(s.descripcion) + '</span>' : '') + botonesSolicitud(s);
+    return etiquetasSolicitud(s) + '<b class="pop-dir">' + esc(s.direccion || 'Sin dirección') + '</b>' +
+      '<span class="pop-lugar">' + esc([s.barrio, s.municipio].filter(Boolean).join(' · ')) + '</span>' +
+      (p.aprox ? '<span class="pop-aprox">Ubicación aproximada (' + esc(p.como || 'referencia') + ')</span>' : '') +
+      contactoSolicitud(s) +
+      (s.descripcion ? '<span class="pop-desc">' + esc(s.descripcion) + '</span>' : '') + botonesSolicitud(s);
   }
   const h = p.h;
   return '<b>' + esc(h.direccion || 'Sin dirección') + '</b><br>' + chipClasif(h.clasif) + ' ' + esc(h.num_formulario || '') +
@@ -166,14 +193,14 @@ function pintarMapa() {
       const icon = L.divIcon({ className: 'mapa-grupo' + (p.aprox ? ' mapa-grupo-aprox' : ''), html: '<span>' + p.items.length + '</span>',
         iconSize: [32, 32] });
       L.marker([p.lat, p.lon], { icon, title: p.items.length + ' solicitudes en este punto' })
-        .bindPopup(() => htmlPopup(p), { maxWidth: 300, minWidth: 270 }).addTo(MAPA.capa);
+        .bindPopup(() => htmlPopup(p), Object.assign({ maxWidth: 300, minWidth: 270 }, VENTANITA)).addTo(MAPA.capa);
       return;
     }
     const color = p.tipo === 'porEvaluar' ? COLOR_PUNTO.porEvaluar : COLOR_PUNTO[p.color];
     // Aproximada: aro hueco y punteado, para que nadie la tome por la ubicación exacta.
     const estilo = p.aprox ? { radius: 9, color, weight: 3, dashArray: '4 3', fillColor: '#ffffff', fillOpacity: 0.55 }
       : { radius: p.tipo === 'porEvaluar' ? 8 : 7, color: '#fff', weight: 2, fillColor: color, fillOpacity: 0.95 };
-    L.circleMarker([p.lat, p.lon], estilo).bindPopup(() => htmlPopup(p), { maxWidth: 260 }).addTo(MAPA.capa);
+    L.circleMarker([p.lat, p.lon], estilo).bindPopup(() => htmlPopup(p), Object.assign({ maxWidth: 280 }, VENTANITA)).addTo(MAPA.capa);
   });
   if (MAPA.reencuadrar && visibles.length) {
     MAPA.mapa.fitBounds(L.latLngBounds(visibles.map((p) => [p.lat, p.lon])), { padding: [30, 30], maxZoom: 16 });

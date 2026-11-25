@@ -785,8 +785,14 @@ button.cifra:hover { box-shadow: var(--sombra); }
 .mapa-grupo span { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; box-sizing: border-box;
   border-radius: 50%; background: #0b4f6c; color: #fff; border: 2px solid #fff; font-weight: 700; font-size: .9rem; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
 .mapa-grupo-aprox span { background: rgba(255,255,255,.92); color: #0b4f6c; border: 3px dashed #0b4f6c; }
-.pop-lista { list-style: none; margin: 6px 0 0; padding: 0; max-height: 240px; overflow-y: auto; }
+.pop-lista { list-style: none; margin: 6px 0 0; padding: 0; max-height: min(300px, 30vh); overflow-y: auto; }
 .pop-lista li { padding: 8px 0; border-top: 1px solid #e3e8ec; }
-.pop-lista .pop-btn { width: calc(50% - 3px); margin-top: 6px; vertical-align: top; white-space: nowrap; padding-left: 6px; padding-right: 6px; }
-.pop-lista .pop-btn + .pop-btn { margin-left: 6px; }
-.pop-aprox { display: inline-block; margin-top: 2px; font-size: .82rem; font-style: italic; color: var(--texto-suave); }
+/* Ventanita de la solicitud (25/11): etiquetas, contacto y Evaluar / Llamar / Cómo llegar. */
+.pop-etiquetas { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+.pop-dir { display: block; font-size: .95rem; }
+.pop-lugar, .pop-contacto, .pop-desc { display: block; margin-top: 2px; }
+.pop-contacto { font-size: .85rem; }
+.pop-acciones { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.pop-acciones .pop-btn { margin: 0; width: 100%; white-space: nowrap; padding-left: 6px; padding-right: 6px; }
+.pop-acciones .pop-evaluar, .pop-acciones .pop-btn:nth-child(2):last-child { grid-column: 1 / -1; }
+.pop-aprox { display: block; margin-top: 2px; font-size: .82rem; font-style: italic; color: var(--texto-suave); }

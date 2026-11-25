@@ -780,4 +780,13 @@ button.cifra:hover { box-shadow: var(--sombra); }
 .mapa-leyenda .leyenda-grupo { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
 .mapa-leyenda .leyenda-grupo b { font-weight: 600; color: var(--texto); }
 @media (max-width: 480px) { .mapa-leyenda { font-size: .78rem; } .mapa-leyenda .leyenda-grupo { column-gap: 10px; } }
+/* Varias solicitudes en el mismo punto (25/11): un solo punto con el número; la ventanita las lista todas. */
+.mapa-grupo { background: none; border: none; }
+.mapa-grupo span { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; box-sizing: border-box;
+  border-radius: 50%; background: #0b4f6c; color: #fff; border: 2px solid #fff; font-weight: 700; font-size: .9rem; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+.mapa-grupo-aprox span { background: rgba(255,255,255,.92); color: #0b4f6c; border: 3px dashed #0b4f6c; }
+.pop-lista { list-style: none; margin: 6px 0 0; padding: 0; max-height: 240px; overflow-y: auto; }
+.pop-lista li { padding: 8px 0; border-top: 1px solid #e3e8ec; }
+.pop-lista .pop-btn { width: calc(50% - 3px); margin-top: 6px; vertical-align: top; white-space: nowrap; padding-left: 6px; padding-right: 6px; }
+.pop-lista .pop-btn + .pop-btn { margin-left: 6px; }
 .pop-aprox { display: inline-block; margin-top: 2px; font-size: .82rem; font-style: italic; color: var(--texto-suave); }

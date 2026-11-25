@@ -48,14 +48,43 @@ function puntosDelMapa() {
   return puntos;
 }
 
+/**
+ * Solicitudes en el MISMO punto (25/11: muchas en "centro del barrio Centro") se dibujaban una encima de otra y
+ * solo se veía la de arriba. Ahora van juntas en un solo punto con el número, y la ventanita las lista todas.
+ * Solo las por evaluar; las evaluadas quedan como estaban.
+ */
+function agruparPorPunto(puntos) {
+  const grupos = new Map(), salida = [];
+  puntos.forEach((p) => {
+    if (p.tipo !== 'porEvaluar') { salida.push(p); return; }
+    const k = p.lat.toFixed(5) + ',' + p.lon.toFixed(5) + (p.aprox ? 'a' : 'e');   // ~1 m
+    if (!grupos.has(k)) {
+      const g = { tipo: 'grupo', lat: p.lat, lon: p.lon, aprox: p.aprox, como: p.como, items: [] };
+      grupos.set(k, g); salida.push(g);
+    }
+    grupos.get(k).items.push(p);
+  });
+  return salida.map((p) => (p.tipo === 'grupo' && p.items.length === 1 ? p.items[0] : p));
+}
+
+function botonesSolicitud(s) {
+  return '<br><button type="button" class="btn-principal btn-chico pop-btn" data-evaluar="' + esc(s.id_solicitud) + '">Evaluar</button>' +
+    '<a class="btn-secundario btn-chico pop-btn" target="_blank" rel="noopener" href="' + esc(urlComoLlegar(s)) + '">' + icono('ruta') + 'Cómo llegar</a>';
+}
+
 function htmlPopup(p) {
+  if (p.tipo === 'grupo') {
+    const items = p.items.slice().sort((a, b) => (ORDEN_PRIORIDAD[a.s.prioridad] ?? 3) - (ORDEN_PRIORIDAD[b.s.prioridad] ?? 3));
+    return '<b>' + p.items.length + ' solicitudes en este punto</b>' +
+      (p.aprox ? '<br><span class="pop-aprox">Ubicación aproximada (' + esc(p.como || 'referencia') + ')</span>' : '') +
+      '<ul class="pop-lista">' + items.map(({ s }) => '<li><b>' + esc(s.direccion || 'Sin dirección') + '</b><br>' +
+        esc([s.barrio, s.prioridad].filter(Boolean).join(' · ')) + botonesSolicitud(s) + '</li>').join('') + '</ul>';
+  }
   if (p.tipo === 'porEvaluar') {
     const s = p.s;
     return '<b>' + esc(s.direccion || 'Sin dirección') + '</b><br>' + esc([s.barrio, s.prioridad].filter(Boolean).join(' · ')) +
       (p.aprox ? '<br><span class="pop-aprox">Ubicación aproximada (' + esc(p.como || 'referencia') + ')</span>' : '') +
-      (s.descripcion ? '<br><span class="pop-desc">' + esc(s.descripcion) + '</span>' : '') +
-      '<br><button type="button" class="btn-principal btn-chico pop-btn" data-evaluar="' + esc(s.id_solicitud) + '">Evaluar</button>' +
-      '<a class="btn-secundario btn-chico pop-btn" target="_blank" rel="noopener" href="' + esc(urlComoLlegar(s)) + '">' + icono('ruta') + 'Cómo llegar</a>';
+      (s.descripcion ? '<br><span class="pop-desc">' + esc(s.descripcion) + '</span>' : '') + botonesSolicitud(s);
   }
   const h = p.h;
   return '<b>' + esc(h.direccion || 'Sin dirección') + '</b><br>' + chipClasif(h.clasif) + ' ' + esc(h.num_formulario || '') +
@@ -76,8 +105,9 @@ async function abrirMapa() {
     }).addTo(MAPA.mapa);
     MAPA.capa = L.layerGroup().addTo(MAPA.mapa);
     MAPA.mapa.on('popupopen', (ev) => {
-      const b = ev.popup.getElement().querySelector('[data-evaluar]');
-      if (b) b.onclick = () => abrirEvaluacion({ solicitud: APP.solicitudes.find((x) => x.id_solicitud === b.dataset.evaluar) });
+      ev.popup.getElement().querySelectorAll('[data-evaluar]').forEach((b) => {
+        b.onclick = () => abrirEvaluacion({ solicitud: APP.solicitudes.find((x) => x.id_solicitud === b.dataset.evaluar) });
+      });
     });
   }
   MAPA.reencuadrar = true;
@@ -127,11 +157,18 @@ function pintarMapa() {
     (sinUbicacion && MAPA.filtro !== 'evaluadas'
       ? '<span class="mapa-sin-ubicacion">' + sinUbicacion + (sinUbicacion === 1 ? ' visita sin ubicación: está solo en la lista' : ' visitas sin ubicación: están solo en la lista') + '</span>' : '');
 
-  const visibles = todos.filter((p) => MAPA.filtro === 'todas' ||
-    (MAPA.filtro === 'porEvaluar' ? p.tipo === 'porEvaluar' : p.tipo === 'evaluada'));
+  const visibles = agruparPorPunto(todos.filter((p) => MAPA.filtro === 'todas' ||
+    (MAPA.filtro === 'porEvaluar' ? p.tipo === 'porEvaluar' : p.tipo === 'evaluada')));
   MAPA.capa.clearLayers();
   // Miles de puntos (19/10): la ventanita se arma al tocar el punto (armarlas todas tardaba segundos).
   visibles.forEach((p) => {
+    if (p.tipo === 'grupo') {
+      const icon = L.divIcon({ className: 'mapa-grupo' + (p.aprox ? ' mapa-grupo-aprox' : ''), html: '<span>' + p.items.length + '</span>',
+        iconSize: [32, 32] });
+      L.marker([p.lat, p.lon], { icon, title: p.items.length + ' solicitudes en este punto' })
+        .bindPopup(() => htmlPopup(p), { maxWidth: 300, minWidth: 270 }).addTo(MAPA.capa);
+      return;
+    }
     const color = p.tipo === 'porEvaluar' ? COLOR_PUNTO.porEvaluar : COLOR_PUNTO[p.color];
     // Aproximada: aro hueco y punteado, para que nadie la tome por la ubicación exacta.
     const estilo = p.aprox ? { radius: 9, color, weight: 3, dashArray: '4 3', fillColor: '#ffffff', fillOpacity: 0.55 }
